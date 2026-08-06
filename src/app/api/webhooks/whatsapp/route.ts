@@ -51,9 +51,8 @@ export async function POST(req: NextRequest) {
           for (const msg of messages) {
             const from = msg.from; // sender's WhatsApp number
             
-            // Process the message in the background to not block the webhook response
-            // We pass the full msg object because we support both text and image
-            processWhatsAppMessage(business.id, from, msg).catch(err => {
+            // Await the message processing so Vercel doesn't freeze the function
+            await processWhatsAppMessage(business.id, from, msg).catch(err => {
               console.error("Error processing WhatsApp message:", err);
             });
           }

@@ -31,8 +31,8 @@ export async function saveApiSettings(formData: FormData) {
     await db.business.update({
       where: { userId: session.user.id },
       data: {
-        metaAccessToken: formData.get("metaAccessToken") as string,
-        metaPhoneNumberId: formData.get("metaPhoneNumberId") as string,
+        metaAccessToken: (formData.get("metaAccessToken") as string).trim(),
+        metaPhoneNumberId: (formData.get("metaPhoneNumberId") as string).trim(),
       },
     });
     revalidatePath("/dashboard/settings");
