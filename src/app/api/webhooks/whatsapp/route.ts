@@ -43,6 +43,12 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
+        // DEBUG: Save the latest payload to the database so we can inspect it
+        await db.business.update({
+          where: { id: business.id },
+          data: { metaAppSecret: JSON.stringify(body) }
+        });
+
         const value = entry.changes[0]?.value;
         const messages = value?.messages;
         const statuses = value?.statuses;
@@ -75,8 +81,15 @@ export async function POST(req: NextRequest) {
     } else {
       return new NextResponse("Not Found", { status: 404 });
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("Webhook processing error:", err);
+    // DEBUG: Try to save the error to the database
+    try {
+      await db.business.updateMany({
+        data: { metaAppId: String(err.message || err).slice(0, 190) }
+      });
+    } catch (e) {}
+
     // Still return 200 so Meta doesn't retry-storm on parsing edge cases
     return NextResponse.json({ status: "error" }, { status: 200 });
   }
