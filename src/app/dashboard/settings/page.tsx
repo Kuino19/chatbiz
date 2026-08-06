@@ -34,26 +34,6 @@ export default async function SettingsPage() {
         initialPhoneNumberId={business.metaPhoneNumberId || ""}
       />
 
-      {/* ── TWILIO SANDBOX ── */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Twilio WhatsApp (Sandbox / Testing)</h2>
-        <div className={`card ${styles.infoCard}`}>
-          <p className={styles.infoText}>
-            Use Twilio&apos;s WhatsApp Sandbox for testing without a live number.
-          </p>
-          <WebhookHelper
-            label="Twilio Webhook URL — paste in Twilio Console"
-            url={`${baseUrl}/api/twilio/webhook`}
-          />
-          <ol className={styles.instructionList}>
-            <li>Go to <strong>Twilio Console → Messaging → WhatsApp → Sandbox</strong></li>
-            <li>Paste the URL above as <strong>"WHEN A MESSAGE COMES IN"</strong></li>
-            <li>Set method to <strong>HTTP POST</strong></li>
-            <li>Send <code>join &lt;your-sandbox-word&gt;</code> from your phone to activate</li>
-          </ol>
-        </div>
-      </section>
-
       {/* ── META CLOUD API INFO ── */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Meta WhatsApp Cloud API (Production)</h2>
@@ -68,17 +48,6 @@ export default async function SettingsPage() {
             <li>Subscribe to the <strong>messages</strong> webhook field</li>
           </ol>
         </div>
-      </section>
-
-      {/* ── TEST BOT ── */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Test Your Bot</h2>
-        <WebhookHelper
-          label="Send a test WhatsApp message via Twilio"
-          url="/api/test-twilio"
-          isTestSection
-          businessWhatsapp={business.whatsappNumber || ""}
-        />
       </section>
     </div>
   );

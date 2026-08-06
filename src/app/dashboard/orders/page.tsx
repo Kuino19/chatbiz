@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import styles from "./page.module.css";
 import { CheckCircle, XCircle, FileText } from "lucide-react";
-import { sendTwilioMessage } from "@/lib/twilio";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 export default async function OrdersPage() {
   const session = await auth();
@@ -25,17 +25,23 @@ export default async function OrdersPage() {
   async function markAsPaid(formData: FormData) {
     "use server";
     const id = formData.get("id") as string;
-    const order = await db.order.findUnique({ where: { id } });
+    const order = await db.order.findUnique({ 
+      where: { id },
+      include: { business: true }
+    });
     
+    if (!order) return;
+
     await db.order.update({
       where: { id },
       data: { status: "PAID" }
     });
 
     // Notify the customer on WhatsApp
-    if (order?.customerPhone) {
+    if (order.customerPhone && order.business) {
       try {
-        await sendTwilioMessage(
+        await sendWhatsAppMessage(
+          order.business,
           order.customerPhone,
           `✅ *Payment Confirmed!*\n\nYour order #${order.id.slice(-6).toUpperCase()} has been verified and is now being processed.\n\nThank you for shopping with us! 🛍️`
         );
@@ -50,7 +56,12 @@ export default async function OrdersPage() {
   async function cancelOrder(formData: FormData) {
     "use server";
     const id = formData.get("id") as string;
-    const order = await db.order.findUnique({ where: { id } });
+    const order = await db.order.findUnique({ 
+      where: { id },
+      include: { business: true }
+    });
+
+    if (!order) return;
 
     await db.order.update({
       where: { id },
@@ -58,9 +69,10 @@ export default async function OrdersPage() {
     });
 
     // Notify the customer on WhatsApp
-    if (order?.customerPhone) {
+    if (order.customerPhone && order.business) {
       try {
-        await sendTwilioMessage(
+        await sendWhatsAppMessage(
+          order.business,
           order.customerPhone,
           `❌ *Order Cancelled*\n\nYour order #${order.id.slice(-6).toUpperCase()} has been cancelled.\n\nIf you have any questions, please reply to this chat.`
         );
@@ -99,13 +111,13 @@ export default async function OrdersPage() {
               </tr>
             </thead>
             <tbody>
-              {business.orders.map(order => (
+              {business.orders.map((order: any) => (
                 <tr key={order.id}>
                   <td className={styles.orderId}>#{order.id.slice(-6).toUpperCase()}</td>
                   <td>{order.customerPhone}</td>
                   <td>
                     <ul className={styles.itemsList}>
-                      {order.items.map(item => (
+                      {order.items.map((item: any) => (
                         <li key={item.id}>
                           {item.quantity}x {item.product.name}
                         </li>
@@ -153,5 +165,3 @@ export default async function OrdersPage() {
     </div>
   );
 }
-
-
