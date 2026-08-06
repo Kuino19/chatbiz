@@ -64,7 +64,7 @@ export default async function DashboardPage() {
       title: "Test Connection",
       description: "Send a test message to ensure everything is working.",
       link: "/dashboard/settings",
-      isCompleted: !!business.metaAccessToken || (!!process.env.TWILIO_ACCOUNT_SID)
+      isCompleted: !!business.metaAccessToken
     }
   ];
 
@@ -115,11 +115,11 @@ export default async function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {recentOrders.map(order => (
+                {recentOrders.map((order: any) => (
                   <tr key={order.id}>
                     <td className={styles.orderId}>#{order.id.slice(-6).toUpperCase()}</td>
                     <td>{order.customerPhone}</td>
-                    <td>{order.items.map(i => `${i.quantity}x ${i.product.name}`).join(", ")}</td>
+                    <td>{order.items.map((i: any) => `${i.quantity}x ${i.product.name}`).join(", ")}</td>
                     <td>₦{order.totalAmount.toFixed(2)}</td>
                     <td>
                       <span className={styles[`status${order.status}` as keyof typeof styles]}>
