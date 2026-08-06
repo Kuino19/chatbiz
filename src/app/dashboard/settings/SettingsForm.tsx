@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import styles from "./page.module.css";
 import toastStyles from "@/components/ToastContainer.module.css";
-import { saveProfile, saveApiSettings } from "./actions";
+import { saveProfile, saveApiSettings, sendTestMessage } from "./actions";
 
 interface Props {
   businessId: string;
@@ -53,6 +53,16 @@ export default function SettingsForm({
     });
   }
 
+  const [testPending, startTest] = useTransition();
+  const testToast = useFormToast();
+
+  function handleTestMessage(formData: FormData) {
+    startTest(async () => {
+      const r = await sendTestMessage(formData);
+      r.success ? testToast.showSuccess("Test message sent ✓") : testToast.showError(r.error || "Failed to send test message");
+    });
+  }
+
   return (
     <>
       {/* ── Toasts ── */}
@@ -69,6 +79,14 @@ export default function SettingsForm({
           <div className={`${toastStyles.toast} ${apiToast.toast.type === "success" ? toastStyles.success : toastStyles.error}`}>
             {apiToast.toast.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
             {apiToast.toast.msg}
+          </div>
+        </div>
+      )}
+      {testToast.toast && (
+        <div className={`${toastStyles.portal}`} style={{ pointerEvents: "none", bottom: "10rem" }}>
+          <div className={`${toastStyles.toast} ${testToast.toast.type === "success" ? toastStyles.success : toastStyles.error}`}>
+            {testToast.toast.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+            {testToast.toast.msg}
           </div>
         </div>
       )}
@@ -125,6 +143,29 @@ export default function SettingsForm({
           </div>
           <button type="submit" className="btn btn-primary" disabled={apiPending}>
             {apiPending ? "Saving…" : "Save API Settings"}
+          </button>
+        </form>
+      </section>
+
+      {/* ── APP REVIEW TEST MESSAGE ── */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>App Review: Send Test Message</h2>
+        <form action={handleTestMessage} className={`card ${styles.form}`}>
+          <div className={styles.formGroup}>
+            <label htmlFor="testNumber">Your WhatsApp Number (e.g. 2348012345678)</label>
+            <input
+              id="testNumber"
+              name="testNumber"
+              type="text"
+              placeholder="Include country code, no +, no spaces"
+              required
+            />
+            <small className={styles.hint}>
+              Click the button below to send the official Meta test template message to your phone. You can record your screen while doing this to submit for your App Review!
+            </small>
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={testPending}>
+            {testPending ? "Sending..." : "Send Test Message"}
           </button>
         </form>
       </section>
