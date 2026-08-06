@@ -1,36 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ChatBiz 🚀
 
-## Getting Started
+**WhatsApp Commerce SaaS** — Automate orders, manage inventory, and collect payments directly inside WhatsApp.
 
-First, run the development server:
+Built for Nigerian businesses with Naira pricing, Twilio + Meta WhatsApp Cloud API support.
 
+---
+
+## ✨ Features
+
+- 🤖 **24/7 WhatsApp Bot** — customers browse, order, and checkout via chat
+- 📦 **Product Catalog** — manage products with inline editing, stock tracking, low-stock alerts
+- 💳 **Payment Verification** — customers send payment proof, you approve in one click
+- 📊 **Analytics Dashboard** — revenue, recent orders, top products
+- 📄 **PDF Invoices** — auto-generated for every order
+- 🔔 **Order Notifications** — Twilio WhatsApp alerts to customers on status changes
+- ⚙️ **Settings** — webhook URL helpers, Meta API config, Test Bot UI
+
+---
+
+## 🛠 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Database | SQLite via Prisma + better-sqlite3 |
+| Auth | NextAuth v5 (credentials) |
+| WhatsApp | Twilio Sandbox + Meta WhatsApp Cloud API |
+| PDF | pdfkit |
+| Styling | Vanilla CSS Modules |
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone and install
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/Kuino19/chatbiz.git
+cd chatbiz
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Set up environment variables
+```bash
+cp .env.example .env
+```
+Fill in your values in `.env`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Set up the database
+```bash
+npx prisma migrate dev --name init
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Run the dev server
+```bash
+npm run dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📡 WhatsApp Integration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Twilio Sandbox (Testing)
+1. Set your webhook URL in Twilio Console → Messaging → WhatsApp → Sandbox:
+   ```
+   https://your-domain.com/api/twilio/webhook
+   ```
+2. Set method to **HTTP POST**
 
-## Deploy on Vercel
+### Meta Cloud API (Production)
+1. Set webhook URL in Meta Developer Portal:
+   ```
+   https://your-domain.com/api/whatsapp/webhook
+   ```
+2. Save your Phone Number ID and Access Token in **Dashboard → Settings**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🌍 Deployment
+
+Recommended: **Railway** (supports SQLite out of the box)
+
+```bash
+railway login
+railway init
+railway up
+```
+
+Set all env vars from `.env.example` in the Railway dashboard.
+
+---
+
+## 📁 Project Structure
+
+```
+src/
+├── app/
+│   ├── page.tsx              # Landing page
+│   ├── login/                # Auth pages
+│   ├── register/
+│   ├── dashboard/
+│   │   ├── page.tsx          # Stats & overview
+│   │   ├── products/         # Product catalog management
+│   │   ├── orders/           # Order management
+│   │   └── settings/         # WhatsApp API config
+│   └── api/
+│       ├── twilio/webhook/   # Twilio incoming messages
+│       └── whatsapp/webhook/ # Meta Cloud API messages
+├── lib/
+│   ├── whatsapp.ts           # Bot conversation logic
+│   ├── twilio.ts             # Twilio client
+│   └── pdf.ts                # Invoice generation
+└── hooks/
+    └── useToast.ts           # Toast notifications
+```
+
+---
+
+## 📄 License
+
+MIT
