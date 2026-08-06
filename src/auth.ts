@@ -6,6 +6,8 @@ import bcrypt from "bcryptjs";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
+  trustHost: true,
+  debug: true,
   providers: [
     CredentialsProvider({
       name: "Credentials",
