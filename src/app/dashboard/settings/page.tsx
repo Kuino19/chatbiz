@@ -39,7 +39,7 @@ export default async function SettingsPage() {
         <div className={`card ${styles.infoCard}`}>
           <WebhookHelper
             label="Meta Webhook URL — paste in Meta Developer Portal"
-            url={`${baseUrl}/api/whatsapp/webhook`}
+            url={`${baseUrl}/api/webhooks/whatsapp`}
           />
           <ol className={styles.instructionList}>
             <li>Open <strong>Meta Developer Portal → Your App → WhatsApp → Configuration</strong></li>
