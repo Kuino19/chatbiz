@@ -60,7 +60,6 @@ model Business {
   userId               String    @unique
   name                 String
   whatsappNumber       String?
-  webhookVerifyToken   String?
   metaAppId            String?
   metaAppSecret        String?
   metaPhoneNumberId    String?

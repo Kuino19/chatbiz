@@ -10,7 +10,6 @@ interface Props {
   businessId: string;
   initialName: string;
   initialWhatsapp: string;
-  initialVerifyToken: string;
   initialMetaToken: string;
   initialPhoneNumberId: string;
 }
@@ -32,7 +31,6 @@ function useFormToast() {
 export default function SettingsForm({
   initialName,
   initialWhatsapp,
-  initialVerifyToken,
   initialMetaToken,
   initialPhoneNumberId,
 }: Props) {
@@ -104,17 +102,7 @@ export default function SettingsForm({
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Meta WhatsApp Cloud API — Credentials</h2>
         <form action={handleApi} className={`card ${styles.form}`}>
-          <div className={styles.formGroup}>
-            <label htmlFor="webhookVerifyToken">Webhook Verify Token</label>
-            <input
-              id="webhookVerifyToken"
-              name="webhookVerifyToken"
-              type="text"
-              defaultValue={initialVerifyToken}
-              placeholder="Any random secret string"
-            />
-            <small className={styles.hint}>Must match the token you enter in the Meta Developer Portal.</small>
-          </div>
+
           <div className={styles.formGroup}>
             <label htmlFor="metaPhoneNumberId">Meta Phone Number ID</label>
             <input

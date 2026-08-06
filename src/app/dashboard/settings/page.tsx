@@ -29,7 +29,6 @@ export default async function SettingsPage() {
         businessId={business.id}
         initialName={business.name}
         initialWhatsapp={business.whatsappNumber || ""}
-        initialVerifyToken={business.webhookVerifyToken || ""}
         initialMetaToken={business.metaAccessToken || ""}
         initialPhoneNumberId={business.metaPhoneNumberId || ""}
       />
@@ -44,7 +43,8 @@ export default async function SettingsPage() {
           />
           <ol className={styles.instructionList}>
             <li>Open <strong>Meta Developer Portal → Your App → WhatsApp → Configuration</strong></li>
-            <li>Paste the URL and your <strong>Verify Token</strong> from the form above</li>
+            <li>Paste the URL above into the <strong>Callback URL</strong> field</li>
+            <li>Paste your <strong>WHATSAPP_VERIFY_TOKEN</strong> (from Vercel Env Vars) into the <strong>Verify Token</strong> field</li>
             <li>Subscribe to the <strong>messages</strong> webhook field</li>
           </ol>
         </div>

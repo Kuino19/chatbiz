@@ -1,45 +1,39 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { processWhatsAppMessage } from '@/lib/whatsapp';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const mode = url.searchParams.get('hub.mode');
-  const token = url.searchParams.get('hub.verify_token');
-  const challenge = url.searchParams.get('hub.challenge');
+// --- GET: Meta verification handshake ---
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
 
-  if (mode && token) {
-    if (mode === 'subscribe') {
-      // Find a business that has this verify token
-      const business = await db.business.findFirst({
-        where: { webhookVerifyToken: token }
-      });
+  const mode = searchParams.get("hub.mode");
+  const token = searchParams.get("hub.verify_token");
+  const challenge = searchParams.get("hub.challenge");
 
-      if (business) {
-        console.log('WEBHOOK_VERIFIED');
-        return new NextResponse(challenge, { status: 200 });
-      }
-    }
-    return new NextResponse("Forbidden", { status: 403 });
+  if (mode === "subscribe" && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+    // Must echo back the challenge as plain text, status 200
+    console.log('WEBHOOK_VERIFIED');
+    return new NextResponse(challenge, { status: 200 });
   }
 
-  return new NextResponse("Bad Request", { status: 400 });
+  return new NextResponse("Forbidden", { status: 403 });
 }
 
-export async function POST(request: Request) {
+// --- POST: incoming messages / status updates ---
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await req.json();
 
     if (body.object === "whatsapp_business_account") {
       for (const entry of body.entry) {
-        // We can use the Meta Phone Number ID to identify the business
         const metaPhoneNumberId = entry.changes[0]?.value?.metadata?.phone_number_id;
         
         if (!metaPhoneNumberId) continue;
 
+        // Lookup which business this phone number belongs to
         const business = await db.business.findFirst({
           where: { metaPhoneNumberId }
         });
@@ -49,23 +43,42 @@ export async function POST(request: Request) {
           continue;
         }
 
-        const messages = entry.changes[0]?.value?.messages;
-        if (messages && messages[0]) {
-          const message = messages[0];
-          const from = message.from; // customer phone number
-          
-          // Process the message in the background to not block the webhook response
-          processWhatsAppMessage(business.id, from, message).catch(err => {
-            console.error("Error processing WhatsApp message:", err);
-          });
+        const value = entry.changes[0]?.value;
+        const messages = value?.messages;
+        const statuses = value?.statuses;
+
+        if (messages && messages.length > 0) {
+          for (const msg of messages) {
+            const from = msg.from; // sender's WhatsApp number
+            
+            // Process the message in the background to not block the webhook response
+            // We pass the full msg object because we support both text and image
+            processWhatsAppMessage(business.id, from, msg).catch(err => {
+              console.error("Error processing WhatsApp message:", err);
+            });
+          }
+        }
+
+        if (statuses && statuses.length > 0) {
+          for (const status of statuses) {
+            console.log("Message status update:", {
+              id: status.id,
+              status: status.status,
+              recipient: status.recipient_id,
+            });
+            // Track delivery state in the future if needed
+          }
         }
       }
-      return new NextResponse("EVENT_RECEIVED", { status: 200 });
+      
+      // Always acknowledge quickly
+      return NextResponse.json({ status: "ok" }, { status: 200 });
     } else {
       return new NextResponse("Not Found", { status: 404 });
     }
-  } catch (error) {
-    console.error("Webhook error:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+  } catch (err) {
+    console.error("Webhook processing error:", err);
+    // Still return 200 so Meta doesn't retry-storm on parsing edge cases
+    return NextResponse.json({ status: "error" }, { status: 200 });
   }
 }

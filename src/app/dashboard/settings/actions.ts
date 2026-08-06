@@ -31,7 +31,6 @@ export async function saveApiSettings(formData: FormData) {
     await db.business.update({
       where: { userId: session.user.id },
       data: {
-        webhookVerifyToken: formData.get("webhookVerifyToken") as string,
         metaAccessToken: formData.get("metaAccessToken") as string,
         metaPhoneNumberId: formData.get("metaPhoneNumberId") as string,
       },
