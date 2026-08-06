@@ -27,6 +27,13 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
+    // DEBUG: Save the latest payload unconditionally
+    try {
+      await db.business.updateMany({
+        data: { metaAppSecret: JSON.stringify(body).slice(0, 190) }
+      });
+    } catch (e) {}
+
     if (body.object === "whatsapp_business_account") {
       for (const entry of body.entry) {
         const metaPhoneNumberId = entry.changes[0]?.value?.metadata?.phone_number_id;
@@ -42,12 +49,6 @@ export async function POST(req: NextRequest) {
           console.error("No business found for phone_number_id:", metaPhoneNumberId);
           continue;
         }
-
-        // DEBUG: Save the latest payload to the database so we can inspect it
-        await db.business.update({
-          where: { id: business.id },
-          data: { metaAppSecret: JSON.stringify(body) }
-        });
 
         const value = entry.changes[0]?.value;
         const messages = value?.messages;
