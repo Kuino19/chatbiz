@@ -121,24 +121,25 @@ export async function connectWhatsAppAccount(codeOrToken: string) {
       accessToken = tokenData.access_token;
     }
 
-    // 1. Fetch Client WhatsApp Business Accounts (since we are a Tech Provider)
-    // The user token granted via Embedded Signup allows us to fetch their linked WABA.
-    const url = `https://graph.facebook.com/v21.0/me/client_whatsapp_business_accounts`;
-    const wabaResponse = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const clientId = process.env.NEXT_PUBLIC_META_APP_ID || "4406781476230289";
     
-    const wabaData = await wabaResponse.json();
-    if (!wabaResponse.ok) {
-      return { success: false, error: wabaData.error?.message || "Failed to fetch WABA" };
+    // 1. Fetch WABA ID using debug_token
+    const debugUrl = `https://graph.facebook.com/v21.0/debug_token?input_token=${accessToken}&access_token=${clientId}|${process.env.META_APP_SECRET}`;
+    const debugResponse = await fetch(debugUrl);
+    const debugData = await debugResponse.json();
+
+    if (!debugResponse.ok || !debugData.data) {
+      return { success: false, error: debugData.error?.message || "Failed to validate token." };
     }
 
-    if (!wabaData.data || wabaData.data.length === 0) {
-      return { success: false, error: "No WhatsApp Business Accounts found. Please ensure you completed the Embedded Signup." };
+    const granularScopes = debugData.data.granular_scopes || [];
+    const wabaScope = granularScopes.find((s: any) => s.scope === "whatsapp_business_management" || s.scope === "whatsapp_business_messaging");
+    
+    if (!wabaScope || !wabaScope.target_ids || wabaScope.target_ids.length === 0) {
+      return { success: false, error: "No WhatsApp Business Account linked to this token. Please ensure you completed the Embedded Signup." };
     }
 
-    // Usually we take the first WABA, or present a UI for the user to choose. We take the first for simplicity.
-    const wabaId = wabaData.data[0].id;
+    const wabaId = wabaScope.target_ids[0];
 
     // 2. Fetch Phone Numbers for this WABA
     const phoneResponse = await fetch(`https://graph.facebook.com/v21.0/${wabaId}/phone_numbers`, {
