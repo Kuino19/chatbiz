@@ -91,7 +91,7 @@ export default function Home() {
                 </div>
 
                 <div className={`${styles.chatBubble} ${styles.chatReceived}`}>
-                  Yes, we have exactly 3 left in stock! It costs ?25,000. Would you like to place an order?
+                  Yes, we have exactly 3 left in stock! It costs ₦25,000. Would you like to place an order?
                   <span className={styles.chatTime}>10:45 AM</span>
                 </div>
 
@@ -103,7 +103,7 @@ export default function Home() {
                 <div className={`${styles.chatBubble} ${styles.chatReceived}`}>
                   Great! Here is your secure payment link. Once paid, I will process your order immediately.
                   <div className={styles.chatAction}>
-                    Pay ?25,000 via Paystack
+                    Pay ₦25,000 via Paystack
                   </div>
                   <span className={styles.chatTime}>10:46 AM</span>
                 </div>
@@ -206,7 +206,7 @@ export default function Home() {
           <div className={`${styles.pricingCard} ${styles.pricingCardPro}`}>
             <div className={styles.popularBadge}>Most Popular</div>
             <div className={styles.planName}>Pro</div>
-            <div className={styles.planPrice}>?15,000 <span>/ month</span></div>
+            <div className={styles.planPrice}>₦15,000 <span>/ month</span></div>
             <p className={styles.planDesc}>For growing businesses that need unlimited power.</p>
             <ul className={styles.planFeatures}>
               <li><CheckCircle size={15} /> Unlimited orders</li>
