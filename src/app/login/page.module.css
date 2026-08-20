@@ -1,266 +1,218 @@
-/* ── PAGE SHELL ── */
+/* PAGE SHELL */
 .page {
   min-height: 100vh;
-  background: #050c14;
+  background: #F9FAFB;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
   position: relative;
   overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-.orb1 {
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(37,211,102,0.14) 0%, transparent 65%);
-  top: -200px;
-  left: -150px;
-  pointer-events: none;
-  animation: drift 12s ease-in-out infinite;
-}
-
-.orb2 {
-  position: absolute;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 65%);
-  bottom: -150px;
-  right: -100px;
-  pointer-events: none;
-  animation: drift 10s ease-in-out infinite reverse;
-}
-
-@keyframes drift {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(30px, -20px); }
-}
-
-/* ── WRAPPER ── */
-.wrapper {
+/* CARD */
+.card {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 3rem 2.5rem;
+  box-shadow: 0 4px 12px rgba(11, 19, 43, 0.05), 0 1px 3px rgba(11, 19, 43, 0.03);
+  border: 1px solid #E5E7EB;
+  position: relative;
+  z-index: 10;
+}
+
+/* BRAND HEADER */
+.brand {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.5rem;
-  position: relative;
-  z-index: 1;
-  animation: slideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  margin-bottom: 2.5rem;
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(28px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ── BRAND ── */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #fff;
-  text-decoration: none;
-  letter-spacing: -0.02em;
-  margin-bottom: 0.5rem;
-}
-
-.logoIcon {
-  width: 30px;
-  height: 30px;
-  background: #25D366;
-  border-radius: 8px;
+.brandIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  box-shadow: 0 0 16px rgba(37,211,102,0.5);
-}
-
-/* ── CARD ── */
-.card {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 24px;
-  padding: 2.5rem;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
-}
-
-.cardHeader {
-  text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .title {
   font-size: 1.75rem;
-  font-weight: 900;
-  color: #fff;
+  font-weight: 800;
+  color: #0B132B;
   letter-spacing: -0.03em;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
 }
 
 .subtitle {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: #4B5563;
+  font-size: 0.95rem;
+  text-align: center;
+  line-height: 1.5;
 }
 
-/* ── FORM ── */
+/* FORM ELEMENTS */
 .form {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 1.25rem;
 }
 
-.formGroup {
+.inputGroup {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.5rem;
+  position: relative;
 }
 
-.formGroup label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.6);
-  letter-spacing: 0.01em;
+.label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0B132B;
 }
 
-.formGroup input {
+.input {
   width: 100%;
-  padding: 0.8rem 1rem;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.85rem 1rem;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
-  color: #fff;
-  font-size: 0.9375rem;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  color: #0B132B;
+  font-size: 0.95rem;
+  transition: all 0.2s;
   outline: none;
 }
-
-.formGroup input::placeholder {
-  color: rgba(255, 255, 255, 0.2);
+.input:focus {
+  border-color: #25D366;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(37,211,102,0.15);
 }
 
-.formGroup input:focus {
-  border-color: rgba(37, 211, 102, 0.5);
-  background: rgba(37, 211, 102, 0.05);
-  box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.12);
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
-/* ── SUBMIT BUTTON ── */
-.submitBtn {
+.passwordToggle {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #9CA3AF;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.passwordToggle:hover {
+  color: #4B5563;
+}
+
+.errorAlert {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #DC2626;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn {
   width: 100%;
-  padding: 0.875rem;
+  padding: 0.9rem;
   background: #25D366;
-  color: white;
+  color: #fff;
   border: none;
   border-radius: 12px;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2);
   margin-top: 0.5rem;
-  box-shadow: 0 0 24px rgba(37, 211, 102, 0.35);
-  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
-  letter-spacing: -0.01em;
 }
-
-.submitBtn:hover {
-  background: #1da851;
-  box-shadow: 0 0 36px rgba(37, 211, 102, 0.5);
+.btn:hover:not(:disabled) {
+  background: #1ea952;
   transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 211, 102, 0.3);
+}
+.btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
-.submitBtn:active {
-  transform: scale(0.98);
-}
-
-/* ── DIVIDER ── */
-.divider {
+.separator {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin: 1.5rem 0 1rem;
-  color: rgba(255,255,255,0.2);
-  font-size: 0.75rem;
+  text-align: center;
+  color: #9CA3AF;
+  font-size: 0.85rem;
+  margin: 1.5rem 0;
 }
-.divider::before,
-.divider::after {
-  content: '';
+.separator::before,
+.separator::after {
+  content: "";
   flex: 1;
-  height: 1px;
-  background: rgba(255,255,255,0.08);
+  border-bottom: 1px solid #E5E7EB;
 }
-.divider span {
-  color: rgba(255,255,255,0.35);
-  white-space: nowrap;
-  font-size: 0.8rem;
-  font-weight: 500;
+.separator:not(:empty)::before {
+  margin-right: .5em;
+}
+.separator:not(:empty)::after {
+  margin-left: .5em;
 }
 
-/* ── REGISTER BUTTON ── */
-.registerBtn {
-  display: block;
+.oauthBtn {
   width: 100%;
-  text-align: center;
-  padding: 0.875rem;
-  border: 1px solid rgba(255,255,255,0.12);
+  padding: 0.85rem;
+  background: #FFFFFF;
+  color: #0B132B;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
-  color: rgba(255,255,255,0.7);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  text-decoration: none;
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
-}
-.registerBtn:hover {
-  border-color: rgba(255,255,255,0.3);
-  color: #fff;
-  background: rgba(255,255,255,0.04);
-}
-
-/* ── SUCCESS BOX ── */
-.successBox {
+  cursor: pointer;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: rgba(37, 211, 102, 0.08);
-  border: 1px solid rgba(37, 211, 102, 0.2);
-  color: #15803d;
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: 1.25rem;
+  justify-content: center;
+  gap: 0.65rem;
+}
+.oauthBtn:hover {
+  background: #F9FAFB;
+  border-color: #D1D5DB;
 }
 
-/* ── ERROR BOX ── */
-.errorBox {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: rgba(239,68,68,0.1);
-  border: 1px solid rgba(239,68,68,0.25);
-  color: #f87171;
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: 1.25rem;
-}
-
-/* ── LEGAL ── */
-.legal {
-  font-size: 0.72rem;
-  color: rgba(255,255,255,0.22);
+.footer {
+  margin-top: 2rem;
   text-align: center;
-  line-height: 1.6;
+  font-size: 0.9rem;
+  color: #4B5563;
 }
-.legal a {
-  color: rgba(255,255,255,0.4);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+.link {
+  color: #25D366;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.2s;
 }
-.legal a:hover { color: rgba(255,255,255,0.7); }
+.link:hover {
+  color: #1ea952;
+}
