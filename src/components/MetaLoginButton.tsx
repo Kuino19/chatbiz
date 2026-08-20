@@ -29,7 +29,8 @@ export default function MetaLoginButton({ onLoginSuccess }: Props) {
         setLoading(false);
         if (response.authResponse) {
           console.log("Meta Login Success:", response.authResponse);
-          onLoginSuccess(response.authResponse.accessToken);
+          // If code is returned, pass the code instead of accessToken
+          onLoginSuccess(response.authResponse.code || response.authResponse.accessToken);
         } else {
           console.error("User cancelled login or did not fully authorize.");
         }
@@ -38,6 +39,8 @@ export default function MetaLoginButton({ onLoginSuccess }: Props) {
         scope: "whatsapp_business_management,whatsapp_business_messaging",
         return_scopes: true,
         config_id: "999368676477731",
+        response_type: "code",
+        override_default_response_type: true,
         extras: {
           feature: "whatsapp_embedded_signup",
           sessionInfoVersion: "2",

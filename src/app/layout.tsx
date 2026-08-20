@@ -35,7 +35,7 @@ export default function RootLayout({
                 appId            : '4406781476230289',
                 autoLogAppEvents : true,
                 xfbml            : true,
-                version          : 'v26.0'
+                version          : 'v21.0'
               });
             };
           `}

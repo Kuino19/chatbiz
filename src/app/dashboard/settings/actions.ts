@@ -93,11 +93,31 @@ export async function sendTestMessage(formData: FormData) {
   }
 }
 
-export async function connectWhatsAppAccount(accessToken: string) {
+export async function connectWhatsAppAccount(codeOrToken: string) {
   const session = await auth();
   if (!session?.user) return { success: false, error: "Not authenticated" };
 
   try {
+    let accessToken = codeOrToken;
+
+    // If it's not a direct token (doesn't start with EAA), it's likely an OAuth code that needs exchanging
+    if (!accessToken.startsWith("EAA")) {
+      if (!process.env.META_APP_SECRET) {
+        return { success: false, error: "Server missing META_APP_SECRET environment variable to exchange OAuth code." };
+      }
+      
+      const tokenUrl = `https://graph.facebook.com/v21.0/oauth/access_token?client_id=4406781476230289&redirect_uri=${encodeURIComponent(process.env.NEXTAUTH_URL || "https://chatbiz.goanitech.com/")}&client_secret=${process.env.META_APP_SECRET}&code=${codeOrToken}`;
+      
+      const tokenResponse = await fetch(tokenUrl);
+      const tokenData = await tokenResponse.json();
+      
+      if (!tokenResponse.ok) {
+        return { success: false, error: tokenData.error?.message || "Failed to exchange OAuth code for token." };
+      }
+      
+      accessToken = tokenData.access_token;
+    }
+
     // 1. Fetch Client WhatsApp Business Accounts (since we are a Tech Provider)
     // The user token granted via Embedded Signup allows us to fetch their linked WABA.
     const url = `https://graph.facebook.com/v21.0/me/client_whatsapp_business_accounts`;
