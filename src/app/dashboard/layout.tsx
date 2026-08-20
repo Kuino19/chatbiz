@@ -1,4 +1,5 @@
 import { auth, signOut } from "@/auth";
+import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import styles from "./layout.module.css";
@@ -17,6 +18,19 @@ export default async function DashboardLayout({
 
   if (!session?.user) {
     redirect("/login");
+  }
+
+  // NOTE: You must import { db } from "@/lib/db" at the top of the file!
+  const business = await db.business.findUnique({
+    where: { userId: session.user.id },
+  });
+
+  if (!business) {
+    redirect("/login");
+  }
+
+  if (!business.onboardingCompleted) {
+    redirect("/onboarding");
   }
 
   const navItems = [

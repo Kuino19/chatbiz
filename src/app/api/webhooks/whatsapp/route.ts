@@ -27,13 +27,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // DEBUG: Save the latest payload unconditionally
-    try {
-      await db.business.updateMany({
-        data: { metaAppSecret: JSON.stringify(body).slice(0, 190) }
-      });
-    } catch (e) {}
-
     if (body.object === "whatsapp_business_account") {
       for (const entry of body.entry) {
         const metaPhoneNumberId = entry.changes[0]?.value?.metadata?.phone_number_id;
@@ -84,12 +77,6 @@ export async function POST(req: NextRequest) {
     }
   } catch (err: any) {
     console.error("Webhook processing error:", err);
-    // DEBUG: Try to save the error to the database
-    try {
-      await db.business.updateMany({
-        data: { metaAppId: String(err.message || err).slice(0, 190) }
-      });
-    } catch (e) {}
 
     // Still return 200 so Meta doesn't retry-storm on parsing edge cases
     return NextResponse.json({ status: "error" }, { status: 200 });

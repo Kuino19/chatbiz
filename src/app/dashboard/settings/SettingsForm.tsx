@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import styles from "./page.module.css";
 import toastStyles from "@/components/ToastContainer.module.css";
-import { saveProfile, saveApiSettings, sendTestMessage } from "./actions";
+import { saveProfile, saveApiSettings, sendTestMessage, connectWhatsAppAccount } from "./actions";
+import MetaLoginButton from "@/components/MetaLoginButton";
 
 interface Props {
   businessId: string;
@@ -12,6 +13,10 @@ interface Props {
   initialWhatsapp: string;
   initialMetaToken: string;
   initialPhoneNumberId: string;
+  initialBankName: string;
+  initialBankAccountNumber: string;
+  initialBankAccountName: string;
+  initialBotPersonality: string;
 }
 
 interface ToastState {
@@ -33,7 +38,12 @@ export default function SettingsForm({
   initialWhatsapp,
   initialMetaToken,
   initialPhoneNumberId,
+  initialBankName,
+  initialBankAccountNumber,
+  initialBankAccountName,
+  initialBotPersonality,
 }: Props) {
+  const [accessToken, setAccessToken] = useState(initialMetaToken);
   const [profilePending, startProfile] = useTransition();
   const [apiPending, startApi] = useTransition();
   const profileToast = useFormToast();
@@ -110,6 +120,48 @@ export default function SettingsForm({
             />
             <small className={styles.hint}>Receive low-stock alerts and order confirmations on your phone.</small>
           </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="bankName">Bank Name</label>
+            <input
+              id="bankName"
+              name="bankName"
+              type="text"
+              defaultValue={initialBankName}
+              placeholder="e.g. GTBank, Access Bank"
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="bankAccountNumber">Account Number</label>
+            <input
+              id="bankAccountNumber"
+              name="bankAccountNumber"
+              type="text"
+              defaultValue={initialBankAccountNumber}
+              placeholder="0123456789"
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="bankAccountName">Account Name</label>
+            <input
+              id="bankAccountName"
+              name="bankAccountName"
+              type="text"
+              defaultValue={initialBankAccountName}
+              placeholder="Your name as on account"
+            />
+            <small className={styles.hint}>Customers will see these bank details when they checkout via WhatsApp.</small>
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="botPersonality">AI Bot Personality</label>
+            <textarea
+              id="botPersonality"
+              name="botPersonality"
+              rows={4}
+              defaultValue={initialBotPersonality}
+              placeholder="e.g. You are a cheerful and professional sales assistant for a boutique clothing store. Use emojis sparingly."
+            />
+            <small className={styles.hint}>Instruct the AI on how to talk to your customers.</small>
+          </div>
           <button type="submit" className="btn btn-primary" disabled={profilePending}>
             {profilePending ? "Saving…" : "Save Profile"}
           </button>
@@ -120,6 +172,18 @@ export default function SettingsForm({
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Meta WhatsApp Cloud API — Credentials</h2>
         <form action={handleApi} className={`card ${styles.form}`}>
+          <MetaLoginButton 
+            onLoginSuccess={async (token) => {
+              setAccessToken(token);
+              const result = await connectWhatsAppAccount(token);
+              if (result.success) {
+                apiToast.showSuccess("Successfully connected WhatsApp account!");
+                // Optionally reload or let React handle the revalidation
+              } else {
+                apiToast.showError(result.error || "Failed to fully configure account.");
+              }
+            }} 
+          />
 
           <div className={styles.formGroup}>
             <label htmlFor="metaPhoneNumberId">Meta Phone Number ID</label>
@@ -137,7 +201,8 @@ export default function SettingsForm({
               id="metaAccessToken"
               name="metaAccessToken"
               type="password"
-              defaultValue={initialMetaToken}
+              value={accessToken}
+              onChange={(e) => setAccessToken(e.target.value)}
               placeholder="••••••••"
             />
           </div>

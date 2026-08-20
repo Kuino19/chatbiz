@@ -1,0 +1,1 @@
+{"name": "order_status_update", "language": "en_US", "category": "UTILITY", "components": [{"type": "BODY", "text": "Hello, this is an update regarding your recent order {{1}}. The current status of your order is: {{2}}. The total amount for this order is {{3}}. Thank you for choosing ChatBiz for your shopping needs."}]}

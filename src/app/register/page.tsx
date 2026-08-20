@@ -62,16 +62,7 @@ export default function RegisterPage() {
               <label htmlFor="email">Email address</label>
               <input id="email" name="email" type="email" required placeholder="you@company.com" />
             </div>
-            <div className={styles.formGroup}>
-              <label htmlFor="whatsappNumber">WhatsApp Business Number</label>
-              <input
-                id="whatsappNumber"
-                name="whatsappNumber"
-                type="tel"
-                required
-                placeholder="+234 800 000 0000"
-              />
-            </div>
+
             <div className={styles.formGroup}>
               <label htmlFor="password">Password</label>
               <input

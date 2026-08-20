@@ -12,6 +12,7 @@ interface Product {
   price: number;
   stock: number;
   lowStockThreshold: number;
+  imageUrl?: string | null;
 }
 
 interface ProductsClientProps {
@@ -111,6 +112,10 @@ export default function ProductsClient({ initialProducts, businessId }: Products
             <label htmlFor="description">Description (Optional)</label>
             <textarea id="description" name="description" rows={2} placeholder="Short description shown in WhatsApp catalog" />
           </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="image">Product Image (Optional)</label>
+            <input id="image" name="image" type="file" accept="image/*" />
+          </div>
           <button type="submit" className="btn btn-primary" disabled={addPending}>
             <Plus size={16} />
             {addPending ? "Adding…" : "Add Product"}
@@ -167,6 +172,10 @@ export default function ProductsClient({ initialProducts, businessId }: Products
                             <label>Description</label>
                             <input name="description" defaultValue={product.description || ""} />
                           </div>
+                          <div className={styles.formGroup}>
+                            <label>Update Image</label>
+                            <input name="image" type="file" accept="image/*" />
+                          </div>
                         </div>
                         <div className={styles.editActions}>
                           <button type="submit" className={styles.btnSave} disabled={isPending}>
@@ -183,10 +192,19 @@ export default function ProductsClient({ initialProducts, businessId }: Products
                     <>
                       <td>
                         <div className={styles.productInfo}>
-                          <span className={styles.productName}>{product.name}</span>
-                          {product.description && (
-                            <span className={styles.productDesc}>{product.description}</span>
+                          {product.imageUrl ? (
+                            <img src={product.imageUrl} alt={product.name} style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 4, marginRight: 12 }} />
+                          ) : (
+                            <div style={{ width: 40, height: 40, backgroundColor: "#f1f5f9", borderRadius: 4, marginRight: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <Package size={20} color="#94a3b8" />
+                            </div>
                           )}
+                          <div style={{ display: "flex", flexDirection: "column" }}>
+                            <span className={styles.productName}>{product.name}</span>
+                            {product.description && (
+                              <span className={styles.productDesc}>{product.description}</span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className={styles.priceCell}>₦{product.price.toLocaleString("en-NG", { minimumFractionDigits: 2 })}</td>

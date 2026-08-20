@@ -31,6 +31,10 @@ export default async function SettingsPage() {
         initialWhatsapp={business.whatsappNumber || ""}
         initialMetaToken={business.metaAccessToken || ""}
         initialPhoneNumberId={business.metaPhoneNumberId || ""}
+        initialBankName={business.bankName || ""}
+        initialBankAccountNumber={business.bankAccountNumber || ""}
+        initialBankAccountName={business.bankAccountName || ""}
+        initialBotPersonality={business.botPersonality || ""}
       />
 
       {/* ── META CLOUD API INFO ── */}

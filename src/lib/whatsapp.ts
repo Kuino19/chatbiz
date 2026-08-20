@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import { generateInvoicePDF } from "./pdf";
 
 const META_API_URL = "https://graph.facebook.com/v21.0";
 
@@ -33,6 +32,42 @@ export async function sendWhatsAppMessage(business: any, to: string, text: strin
   return data;
 }
 
+export async function sendWhatsAppImage(business: any, to: string, imageUrl: string, caption?: string) {
+  if (!business.metaAccessToken || !business.metaPhoneNumberId) {
+    console.error("Meta WhatsApp credentials missing for business", business.id);
+    return;
+  }
+
+  const url = `${META_API_URL}/${business.metaPhoneNumberId}/messages`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${business.metaAccessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "image",
+      image: { 
+        link: imageUrl,
+        ...(caption && { caption })
+      },
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    console.error("[Meta API Error]", JSON.stringify(data));
+  }
+  return data;
+}
+
+import { callLLM, AI_TOOLS, buildSystemPrompt } from "./ai";
+import { initializeTransaction } from "./paystack";
+
 export async function processWhatsAppMessage(businessId: string, from: string, message: any) {
   const business = await db.business.findUnique({
     where: { id: businessId },
@@ -48,202 +83,209 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
 
   if (!session) {
     session = await db.customerSession.create({
-      data: { businessId, customerPhone: from, currentState: "GREETING", cartData: "[]" }
+      data: { businessId, customerPhone: from, currentState: "ACTIVE", cartData: "[]", conversationHistory: "[]" }
     });
   }
 
   const messageType = message.type;
   
-  // Quick hack: If user says "hi" or "menu", reset to GREETING
-  if (messageType === "text" && ["hi", "hello", "menu"].includes(message.text.body.toLowerCase())) {
-    session = await db.customerSession.update({
+  // Quick reset command for testing/stuck users
+  if (messageType === "text" && message.text.body.toLowerCase().trim() === "reset") {
+    await db.customerSession.update({
       where: { id: session.id },
-      data: { currentState: "GREETING", cartData: "[]" }
+      data: { currentState: "ACTIVE", cartData: "[]", conversationHistory: "[]" }
     });
+    await sendWhatsAppMessage(business, from, "Conversation reset. How can I help you today?");
+    return;
   }
 
-  const cart = JSON.parse(session.cartData || "[]");
-
-  switch (session.currentState) {
-    case "GREETING":
-      await sendWhatsAppMessage(business, from, 
-        `Welcome to ${business.name}! 👋\nHere is our product catalog. Reply with the product ID to add it to your cart, or type 'checkout' to finish.\n\n` + 
-        business.products.map(p => `*ID: ${p.id.slice(-4)}* - ${p.name} (₦${p.price})`).join("\n")
-      );
+  if (session.currentState === "AWAITING_PAYMENT") {
+    // If they are awaiting payment but typed 'cancel', let them cancel
+    if (messageType === "text" && message.text.body.toLowerCase().trim() === "cancel") {
       await db.customerSession.update({
         where: { id: session.id },
-        data: { currentState: "BROWSING" }
+        data: { currentState: "ACTIVE", cartData: "[]", conversationHistory: "[]" }
       });
-      break;
-
-    case "BROWSING":
-      if (messageType === "text") {
-        const text = message.text.body.toLowerCase().trim();
-        
-        if (text === "checkout") {
-          if (cart.length === 0) {
-            await sendWhatsAppMessage(business, from, "Your cart is empty. Type 'menu' to see our products.");
-            return;
-          }
-          
-          const total = cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-          const cartSummary = cart.map((item: any) => `${item.quantity}x ${item.name} (₦${item.price})`).join("\n");
-          
-          await sendWhatsAppMessage(business, from, 
-            `*Order Summary*\n\n${cartSummary}\n\n*Total: ₦${total}*\n\nPlease reply with 'confirm' to place your order or 'cancel' to start over.`
-          );
-          
-          await db.customerSession.update({
-            where: { id: session.id },
-            data: { currentState: "CONFIRMING" }
-          });
-        } else {
-          // Assume they typed a product ID suffix
-          const product = business.products.find(p => p.id.endsWith(text) || p.id.slice(-4) === text);
-          if (product) {
-            // Ask for quantity
-            await sendWhatsAppMessage(business, from, `How many ${product.name} would you like? (Reply with a number)`);
-            await db.customerSession.update({
-              where: { id: session.id },
-              data: { currentState: `ASKING_QTY_${product.id}` }
-            });
-          } else {
-            await sendWhatsAppMessage(business, from, "Product not found. Reply with a valid ID, or 'checkout' to finish.");
-          }
-        }
-      }
-      break;
-
-    case "CONFIRMING":
-      if (messageType === "text") {
-        const text = message.text.body.toLowerCase().trim();
-        if (text === "confirm") {
-          // Create order
-          const totalAmount = cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-          
-          const order = await db.order.create({
-            data: {
-              businessId,
-              customerPhone: from,
-              totalAmount,
-              items: {
-                create: cart.map((item: any) => ({
-                  productId: item.productId,
-                  quantity: item.quantity,
-                  priceAtTime: item.price
-                }))
-              }
-            }
-          });
-
-          // Decrease stock
-          for (const item of cart) {
-            await db.product.update({
-              where: { id: item.productId },
-              data: { stock: { decrement: item.quantity } }
-            });
-          }
-
-          // Generate PDF Invoice (simplified)
-          const invoiceUrl = await generateInvoicePDF(order.id, cart, totalAmount);
-
-          await sendWhatsAppMessage(business, from, 
-            `Thank you! Your order #${order.id.slice(-6).toUpperCase()} has been placed.\nTotal: ₦${totalAmount}\n\nPlease transfer to Acc 1234567890 (GTBank) and *reply with a screenshot of the payment proof*.`
-          );
-
-          await db.customerSession.update({
-            where: { id: session.id },
-            data: { currentState: "AWAITING_PAYMENT", cartData: "[]" }
-          });
-
-          // Check low stock
-          for (const item of cart) {
-            const prod = await db.product.findUnique({ where: { id: item.productId } });
-            if (prod && prod.stock <= prod.lowStockThreshold) {
-              if (business.whatsappNumber) {
-                await sendWhatsAppMessage(business, business.whatsappNumber.replace("+",""), 
-                  `🚨 *Low Stock Alert*: ${prod.name} has only ${prod.stock} left in stock!`
-                );
-              }
-            }
-          }
-
-        } else if (text === "cancel") {
-          await db.customerSession.update({
-            where: { id: session.id },
-            data: { currentState: "GREETING", cartData: "[]" }
-          });
-          await sendWhatsAppMessage(business, from, "Order cancelled. Type 'menu' to start over.");
-        }
-      }
-      break;
-
-    case "AWAITING_PAYMENT":
-      if (messageType === "image") {
-        const imageId = message.image.id;
-        // In a real app, we would download the image using the media API and save to S3/Cloudinary.
-        // For now, we simulate saving the proof URL.
-        const proofUrl = `https://graph.facebook.com/v19.0/${imageId}`; 
-        
-        // Find latest pending order
-        const order = await db.order.findFirst({
-          where: { businessId, customerPhone: from, status: "PENDING" },
-          orderBy: { createdAt: 'desc' }
-        });
-
-        if (order) {
-          await db.order.update({
-            where: { id: order.id },
-            data: { paymentProofUrl: proofUrl }
-          });
-
-          await sendWhatsAppMessage(business, from, 
-            "Payment proof received! We are verifying it. You will be notified once approved."
-          );
-
-          // Notify business owner
-          if (business.whatsappNumber) {
-            await sendWhatsAppMessage(business, business.whatsappNumber.replace("+",""), 
-              `💰 *Payment Proof Uploaded* for Order #${order.id.slice(-6).toUpperCase()}.\nPlease review it in your dashboard.`
-            );
-          }
-
-          await db.customerSession.update({
-            where: { id: session.id },
-            data: { currentState: "GREETING" }
-          });
-        }
-      } else {
-        await sendWhatsAppMessage(business, from, "Please upload an image of your payment receipt.");
-      }
-      break;
-
-    default:
-      if (session.currentState.startsWith("ASKING_QTY_")) {
-        const productId = session.currentState.replace("ASKING_QTY_", "");
-        const product = business.products.find(p => p.id === productId);
-        
-        if (messageType === "text" && product) {
-          const qty = parseInt(message.text.body.trim(), 10);
-          if (isNaN(qty) || qty <= 0) {
-            await sendWhatsAppMessage(business, from, "Please enter a valid number.");
-          } else if (qty > product.stock) {
-            await sendWhatsAppMessage(business, from, `Sorry, we only have ${product.stock} in stock. How many would you like?`);
-          } else {
-            cart.push({
-              productId: product.id,
-              name: product.name,
-              price: product.price,
-              quantity: qty
-            });
-            await db.customerSession.update({
-              where: { id: session.id },
-              data: { currentState: "BROWSING", cartData: JSON.stringify(cart) }
-            });
-            await sendWhatsAppMessage(business, from, `Added ${qty}x ${product.name} to cart.\nReply with another product ID to add more, or type 'checkout' to finish.`);
-          }
-        }
-      }
-      break;
+      await sendWhatsAppMessage(business, from, "Order cancelled. Let me know if you need anything else!");
+      return;
+    }
+    
+    // Check if there's a pending order for this customer to fetch the link
+    const order = await db.order.findFirst({
+      where: { businessId, customerPhone: from, status: "PENDING" },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    if (order && order.paymentUrl) {
+      await sendWhatsAppMessage(business, from, `You have a pending order. Please complete your payment here:\n${order.paymentUrl}\n\nType 'cancel' to cancel this order.`);
+    } else {
+      await sendWhatsAppMessage(business, from, "You have a pending order. Please complete your payment.");
+    }
+    return;
   }
+
+  // Handle only text messages for now in the AI loop
+  if (messageType !== "text") {
+    await sendWhatsAppMessage(business, from, "I can only process text messages right now.");
+    return;
+  }
+
+  const userText = message.text.body;
+  
+  let cart = JSON.parse(session.cartData || "[]");
+  let history = JSON.parse(session.conversationHistory || "[]");
+
+  history.push({ role: "user", content: userText });
+
+  const systemPrompt = buildSystemPrompt(business, business.products, cart);
+  const messages = [{ role: "system", content: systemPrompt }, ...history];
+
+  let aiResponse = await callLLM({ messages, tools: AI_TOOLS });
+
+  // Handle Tool Calls Loop
+  while (aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {
+    // Add the AI's tool call to history so the LLM knows it called it
+    history.push(aiResponse);
+    messages.push(aiResponse);
+
+    for (const toolCall of aiResponse.tool_calls) {
+      const args = JSON.parse(toolCall.function.arguments || "{}");
+      let toolResult = "";
+
+      if (toolCall.function.name === "add_to_cart") {
+        const product = business.products.find((p: any) => p.id === args.productId);
+        if (!product) {
+          toolResult = `Error: Product with ID ${args.productId} not found.`;
+        } else if (product.stock < args.quantity) {
+          toolResult = `Error: Only ${product.stock} items available in stock.`;
+        } else {
+          const existing = cart.find((i: any) => i.productId === product.id);
+          if (existing) {
+            existing.quantity += args.quantity;
+          } else {
+            cart.push({ productId: product.id, name: product.name, price: product.price, quantity: args.quantity });
+          }
+          toolResult = `Success: Added ${args.quantity}x ${product.name} to cart.`;
+        }
+      } 
+      else if (toolCall.function.name === "remove_from_cart") {
+        const index = cart.findIndex((i: any) => i.productId === args.productId);
+        if (index > -1) {
+          cart.splice(index, 1);
+          toolResult = `Success: Removed item from cart.`;
+        } else {
+          toolResult = `Error: Item not in cart.`;
+        }
+      }
+      else if (toolCall.function.name === "send_product_image") {
+        const product = business.products.find((p: any) => p.id === args.productId);
+        if (!product) {
+          toolResult = `Error: Product with ID ${args.productId} not found.`;
+        } else if (!product.imageUrl) {
+          toolResult = `Error: No image available for ${product.name}.`;
+        } else {
+          await sendWhatsAppImage(business, from, product.imageUrl, `Here is the ${product.name}!`);
+          toolResult = `Success: Sent image of ${product.name} to the user.`;
+        }
+      }
+      else if (toolCall.function.name === "checkout") {
+        if (cart.length === 0) {
+          toolResult = "Error: Cart is empty. Tell the user to add items first.";
+        } else {
+          // Calculate total
+          const totalAmount = cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+          const totalKobo = Math.round(totalAmount * 100);
+
+          try {
+            // Create Order
+            const order = await db.order.create({
+              data: {
+                businessId,
+                customerPhone: from,
+                totalAmount,
+                items: {
+                  create: cart.map((item: any) => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                    priceAtTime: item.price
+                  }))
+                }
+              }
+            });
+
+            // Initialize Paystack transaction
+            // Generate a dummy email if none is known, as Paystack requires an email.
+            const customerEmail = `${from.replace("+", "")}@chatbiz.local`;
+            
+            const paystackData = await initializeTransaction({
+              email: customerEmail,
+              amount: totalKobo,
+              reference: `ORDER-${order.id}`,
+              metadata: { orderId: order.id, customerPhone: from, businessId }
+            });
+
+            await db.order.update({
+              where: { id: order.id },
+              data: { 
+                paystackReference: paystackData.reference,
+                paymentUrl: paystackData.authorization_url,
+                customerEmail
+              }
+            });
+
+            // Set session to awaiting payment
+            await db.customerSession.update({
+              where: { id: session.id },
+              data: { currentState: "AWAITING_PAYMENT", cartData: "[]" }
+            });
+
+            toolResult = `Success: Checkout generated. Send this Paystack payment link to the user: ${paystackData.authorization_url}`;
+            // clear the local cart variable so next prompt reflects it
+            cart = [];
+          } catch (e: any) {
+            console.error("Checkout tool error:", e);
+            toolResult = `Error: Failed to generate checkout. ${e.message}`;
+          }
+        }
+      }
+
+      // Add tool response to messages array
+      const toolMessage = {
+        role: "tool",
+        tool_call_id: toolCall.id,
+        name: toolCall.function.name,
+        content: toolResult
+      };
+      history.push(toolMessage);
+      messages.push(toolMessage);
+    }
+
+    // Call LLM again to get the final textual response after tools executed
+    // We update the system prompt in case cart changed
+    messages[0].content = buildSystemPrompt(business, business.products, cart);
+    aiResponse = await callLLM({ messages, tools: AI_TOOLS });
+  }
+
+  // Once we have a pure textual response from AI:
+  if (aiResponse.content) {
+    await sendWhatsAppMessage(business, from, aiResponse.content);
+    history.push({ role: "assistant", content: aiResponse.content });
+  }
+
+  // Trim history to prevent huge payload (keep last 20 messages)
+  if (history.length > 20) {
+    history = history.slice(history.length - 20);
+  }
+
+  // Save session state (currentState might have changed to AWAITING_PAYMENT in the checkout tool)
+  const currentSession = await db.customerSession.findUnique({ where: { id: session.id } });
+  
+  await db.customerSession.update({
+    where: { id: session.id },
+    data: {
+      cartData: JSON.stringify(cart),
+      conversationHistory: JSON.stringify(history),
+      currentState: currentSession?.currentState // preserve AWAITING_PAYMENT if it was set
+    }
+  });
 }
