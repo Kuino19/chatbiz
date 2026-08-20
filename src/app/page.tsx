@@ -13,7 +13,7 @@ export default function Home() {
       {/* ── NAVBAR ── */}
       <nav className={styles.navbar}>
         <div className={styles.logo}>
-          <div className={styles.logoIcon}><MessageSquare size={16} /></div>
+          <img src="/logo.png" alt="ChatBiz Logo" style={{ width: 24, height: 24 }} />
           <span>ChatBiz</span>
         </div>
         <div className={styles.navLinks}>
@@ -322,7 +322,7 @@ export default function Home() {
         <div className={styles.footerInner}>
           <div className={styles.footerBrand}>
             <div className={styles.logo} style={{ marginBottom: "1rem" }}>
-              <div className={styles.logoIcon}><MessageSquare size={14} /></div>
+              <img src="/logo.png" alt="ChatBiz Logo" style={{ width: 20, height: 20 }} />
               <span>ChatBiz</span>
             </div>
             <p>Automating WhatsApp commerce for the next generation of Nigerian retailers.</p>

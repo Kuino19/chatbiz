@@ -12,9 +12,7 @@ export default function MobileNav({ children }: { children: React.ReactNode }) {
     <div className={styles.mobileWrapper}>
       <header className={styles.mobileHeader}>
         <div className={styles.brand}>
-          <div className={styles.logoIconBg}>
-            <MessageSquare size={16} color="white" />
-          </div>
+          <img src="/logo.png" alt="ChatBiz Logo" style={{ width: 24, height: 24 }} />
           <span>ChatBiz</span>
         </div>
         <button className={styles.menuBtn} onClick={() => setIsOpen(!isOpen)}>

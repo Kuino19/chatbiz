@@ -43,9 +43,7 @@ export default async function DashboardLayout({
   const sidebarContent = (
     <>
       <div className={styles.brand}>
-        <div className={styles.logoIconBg}>
-          <MessageSquare size={14} color="white" />
-        </div>
+        <img src="/logo.png" alt="ChatBiz Logo" style={{ width: 26, height: 26 }} />
         <h2>ChatBiz</h2>
       </div>
 

@@ -27,7 +27,7 @@ export default function RegisterPage() {
 
       <div className={styles.wrapper}>
         <Link href="/" className={styles.brand}>
-          <div className={styles.logoIcon}><MessageSquare size={15} /></div>
+          <img src="/logo.png" alt="ChatBiz" style={{ width: 22, height: 22 }} />
           <span>ChatBiz</span>
         </Link>
 

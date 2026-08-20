@@ -47,7 +47,7 @@ function LoginForm() {
       <div className={styles.wrapper}>
         {/* Logo */}
         <Link href="/" className={styles.brand}>
-          <div className={styles.logoIcon}><MessageSquare size={15} /></div>
+          <img src="/logo.png" alt="ChatBiz" style={{ width: 22, height: 22 }} />
           <span>ChatBiz</span>
         </Link>
 
