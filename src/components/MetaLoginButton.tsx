@@ -34,6 +34,13 @@ export default function MetaLoginButton({ onLoginSuccess, flowType }: Props) {
       extras.featureType = "whatsapp_business_app_onboarding";
     }
 
+    const configId = process.env.NEXT_PUBLIC_META_CONFIG_ID;
+    if (!configId) {
+      alert("Missing WhatsApp Configuration ID. Please add NEXT_PUBLIC_META_CONFIG_ID to your environment variables.");
+      setLoading(false);
+      return;
+    }
+
     window.FB.login(
       (response: any) => {
         setLoading(false);
@@ -55,7 +62,7 @@ export default function MetaLoginButton({ onLoginSuccess, flowType }: Props) {
       {
         scope: "whatsapp_business_management,whatsapp_business_messaging",
         return_scopes: true,
-        config_id: "999368676477731",
+        config_id: configId,
         response_type: "code",
         override_default_response_type: true,
         extras
