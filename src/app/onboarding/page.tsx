@@ -32,9 +32,7 @@ export default async function OnboardingPage() {
 
       <div className={styles.wrapper}>
         <div className={styles.brand}>
-          <div className={styles.logoIcon}>
-            <MessageSquare size={15} />
-          </div>
+          <img src="/logo.png" alt="ChatBiz Logo" style={{ width: 20, height: 20 }} />
           <span>ChatBiz</span>
         </div>
 

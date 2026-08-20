@@ -33,8 +33,16 @@ export default function OnboardingClient() {
 
   return (
     <div className={styles.card}>
+      <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+        <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#6b7280", textTransform: "uppercase", letterSpacing: "1px" }}>Step 1 of 2</span>
+        <div style={{ display: "flex", gap: "4px", justifyContent: "center", marginTop: "8px" }}>
+          <div style={{ height: "4px", width: "30px", background: "#25D366", borderRadius: "2px" }} />
+          <div style={{ height: "4px", width: "30px", background: "#e5e7eb", borderRadius: "2px" }} />
+        </div>
+      </div>
+
       <div className={styles.iconWrapper}>
-        <MessageSquare size={32} color="#1877F2" />
+        <MessageSquare size={32} color="#25D366" />
       </div>
       <h1 className={styles.title}>Connect WhatsApp</h1>
       <p className={styles.subtitle}>
@@ -62,9 +70,16 @@ export default function OnboardingClient() {
           ) : (
             <>
               <MetaLoginButton onLoginSuccess={handleLoginSuccess} />
-              <p className={styles.helperText}>
-                You will be redirected to Meta to securely authorize your WhatsApp number.
+              <p className={styles.helperText} style={{ marginBottom: "1rem", color: "#6b7280" }}>
+                🔒 We never see your WhatsApp password. You will be redirected to Meta to securely authorize your number.
               </p>
+              
+              <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "1rem", marginTop: "1rem", fontSize: "0.9rem" }}>
+                <p style={{ color: "#4b5563", marginBottom: "0.5rem" }}>Don't have a WhatsApp Business number yet?</p>
+                <a href="https://business.whatsapp.com/" target="_blank" rel="noreferrer" style={{ color: "#25D366", fontWeight: "600", textDecoration: "none" }}>
+                  Here's how to set one up in 2 minutes &rarr;
+                </a>
+              </div>
             </>
           )}
         </div>
