@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import styles from "./page.module.css";
 import {
   Rocket, Bot, DollarSign, CheckCircle, Star, Globe,
@@ -33,12 +33,12 @@ export default function Home() {
           {/* Left: Copy */}
           <div className={styles.heroLeft}>
             <div className={styles.badge}>
-              <ShieldCheck size={16} /> Trusted by 500+ Nigerian Vendors
+              <ShieldCheck size={16} /> Built for Nigerian WhatsApp vendors
             </div>
             
             <h1 className={styles.heroTitle}>
               Sell on WhatsApp.<br/>
-              Wake up to <span>Bank Alerts.</span>
+              Wake up to <span>Sales, Not Screenshots.</span>
             </h1>
             
             <p className={styles.heroSub}>
@@ -58,7 +58,7 @@ export default function Home() {
                 <div className={styles.trustAvatar}>F</div>
               </div>
               <div className={styles.trustText}>
-                Join Amara, Chidi, and <strong>500+ others</strong> growing their business.
+                Join Amara, Chidi, and <strong>other smart vendors</strong> growing their business.
               </div>
             </div>
           </div>
@@ -239,7 +239,7 @@ export default function Home() {
       {/* FINAL CTA */}
       <section className={styles.finalCta}>
         <h2>Ready to grow your business?</h2>
-        <p>Join 500+ entrepreneurs selling smarter on WhatsApp today.</p>
+        <p>Join other smart entrepreneurs selling smarter on WhatsApp today.</p>
         <Link href="/register" className={styles.ctaPrimary}>
           Get Started For Free
         </Link>
