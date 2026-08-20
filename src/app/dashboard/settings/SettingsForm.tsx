@@ -173,6 +173,7 @@ export default function SettingsForm({
         <h2 className={styles.sectionTitle}>Meta WhatsApp Cloud API — Credentials</h2>
         <form action={handleApi} className={`card ${styles.form}`}>
           <MetaLoginButton 
+            flowType="coexistence"
             onLoginSuccess={async (token) => {
               setAccessToken(token);
               const result = await connectWhatsAppAccount(token);

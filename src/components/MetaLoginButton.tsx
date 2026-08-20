@@ -11,9 +11,10 @@ declare global {
 
 interface Props {
   onLoginSuccess: (accessToken: string) => void;
+  flowType: "coexistence" | "new";
 }
 
-export default function MetaLoginButton({ onLoginSuccess }: Props) {
+export default function MetaLoginButton({ onLoginSuccess, flowType }: Props) {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = () => {
@@ -24,15 +25,31 @@ export default function MetaLoginButton({ onLoginSuccess }: Props) {
 
     setLoading(true);
 
+    const extras: any = {
+      feature: "whatsapp_embedded_signup",
+      sessionInfoVersion: "2",
+    };
+
+    if (flowType === "coexistence") {
+      extras.featureType = "whatsapp_business_app_onboarding";
+    }
+
     window.FB.login(
       (response: any) => {
         setLoading(false);
         if (response.authResponse) {
           console.log("Meta Login Success:", response.authResponse);
+          // Track success based on flow
+          if (typeof window !== "undefined" && (window as any).posthog) {
+             (window as any).posthog.capture('whatsapp_connected', { flow: flowType });
+          }
           // If code is returned, pass the code instead of accessToken
           onLoginSuccess(response.authResponse.code || response.authResponse.accessToken);
         } else {
           console.error("User cancelled login or did not fully authorize.");
+          if (typeof window !== "undefined" && (window as any).posthog) {
+             (window as any).posthog.capture('whatsapp_connection_cancelled', { flow: flowType });
+          }
         }
       },
       {
@@ -41,10 +58,7 @@ export default function MetaLoginButton({ onLoginSuccess }: Props) {
         config_id: "999368676477731",
         response_type: "code",
         override_default_response_type: true,
-        extras: {
-          feature: "whatsapp_embedded_signup",
-          sessionInfoVersion: "2",
-        }
+        extras
       }
     );
   };

@@ -80,7 +80,7 @@ export default function OnboardingClient() {
           <p className={styles.subtitle} style={{ marginBottom: "1.5rem" }}>
             {onboardingStep === "existing"
               ? "ChatBiz will safely co-exist with your current WhatsApp Business app. Your existing chats and customers stay exactly where they are."
-              : "You will be guided to register your new phone number with WhatsApp. Make sure the number can receive SMS."}
+              : "Register your fresh number directly as an API line. You don't even need to install the WhatsApp app on your phone."}
           </p>
 
           <button onClick={() => setOnboardingStep("selection")} style={{ fontSize: "0.85rem", color: "#6b7280", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", marginBottom: "1.5rem" }}>
@@ -110,18 +110,37 @@ export default function OnboardingClient() {
               </div>
             ) : (
               <>
-                <MetaLoginButton onLoginSuccess={handleLoginSuccess} />
+                {onboardingStep === "existing" && (
+                  <div style={{ background: "#F9FAFB", borderRadius: "8px", padding: "1rem", marginBottom: "1.5rem", border: "1px solid #E5E7EB", textAlign: "left" }}>
+                    <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#0B132B", marginBottom: "0.75rem" }}>What to expect next:</p>
+                    <ol style={{ paddingLeft: "1.25rem", margin: 0, fontSize: "0.85rem", color: "#4B5563", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      <li>Click <strong>Connect</strong> below to open Facebook.</li>
+                      <li>Check your WhatsApp Business app on your phone for a message from "Facebook Business".</li>
+                      <li>Tap <strong>Connect</strong> inside WhatsApp, then come back here to enter the code.</li>
+                    </ol>
+                  </div>
+                )}
+                
+                <MetaLoginButton 
+                  onLoginSuccess={handleLoginSuccess} 
+                  flowType={onboardingStep === "existing" ? "coexistence" : "new"} 
+                />
+                
                 <p className={styles.helperText} style={{ marginBottom: "1rem", color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Lock size={12} style={{ marginRight: '6px' }} />
                   We never see your WhatsApp password. You will be redirected to Meta to securely authorize your number.
                 </p>
                 
                 {onboardingStep === "new" && (
-                  <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "1rem", marginTop: "1rem", fontSize: "0.9rem" }}>
-                    <p style={{ color: "#4b5563", marginBottom: "0.5rem" }}>Need help getting a new number?</p>
-                    <a href="https://business.whatsapp.com/" target="_blank" rel="noreferrer" style={{ color: "#6b7280", fontWeight: "500", textDecoration: "underline" }}>
-                      Read Meta's official guide &rarr;
-                    </a>
+                  <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "1rem", marginTop: "1rem", fontSize: "0.85rem" }}>
+                    <p style={{ color: "#4b5563", marginBottom: "0.25rem", fontWeight: "600" }}>Getting an error?</p>
+                    <p style={{ color: "#6b7280", lineHeight: 1.5 }}>
+                      If Meta says your number is already registered (a common issue with recycled SIMs), try 
+                      <button onClick={() => setOnboardingStep("existing")} style={{ background: "none", border: "none", color: "#0B132B", fontWeight: "600", textDecoration: "underline", cursor: "pointer", padding: "0 4px" }}>
+                        connecting it as an existing number
+                      </button> 
+                      instead.
+                    </p>
                   </div>
                 )}
               </>
