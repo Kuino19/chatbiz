@@ -27,7 +27,6 @@ export default function Home() {
 
       {/* ── HERO ── */}
       <section className={styles.hero}>
-        {/* animated gradient orbs */}
         <div className={styles.orb1} />
         <div className={styles.orb2} />
         <div className={styles.orb3} />
@@ -36,17 +35,16 @@ export default function Home() {
           <div className={styles.heroLeft}>
             <div className={styles.badge}>
               <span className={styles.badgeDot} />
-              Now with AI-powered responses ⚡
+              Now with a Smart AI Assistant 🚀
             </div>
 
             <h1 className={styles.heroTitle}>
-              Sell smarter on<br />
-              <span className={styles.gradientText}>WhatsApp.</span>
+              Make sales while you<br />
+              <span className={styles.gradientText}>sleep.</span>
             </h1>
 
             <p className={styles.heroSub}>
-              The all-in-one platform built for Nigerian businesses to automate orders,
-              manage inventory, and collect payments — directly inside WhatsApp.
+              Stop the "send account number" stress. ChatBiz gives you a smart WhatsApp assistant that replies customers, takes orders, and collects payment instantly.
             </p>
 
             <div className={styles.heroActions}>
@@ -61,17 +59,17 @@ export default function Home() {
             <div className={styles.heroStats}>
               <div className={styles.statPill}>
                 <strong>500+</strong>
-                <span>Businesses</span>
+                <span>Vendors</span>
               </div>
               <div className={styles.statDivider} />
               <div className={styles.statPill}>
                 <strong>10k+</strong>
-                <span>Orders Processed</span>
+                <span>Orders Sold</span>
               </div>
               <div className={styles.statDivider} />
               <div className={styles.statPill}>
-                <strong>99.9%</strong>
-                <span>Uptime</span>
+                <strong>24/7</strong>
+                <span>Active</span>
               </div>
             </div>
           </div>
@@ -86,7 +84,7 @@ export default function Home() {
                 </div>
                 <div>
                   <p>New Order #4202</p>
-                  <small>₦25,000.00 · just now</small>
+                  <small>₦50,000.00 • just now</small>
                 </div>
               </div>
               <div className={`${styles.notifCard} ${styles.notif2}`}>
@@ -95,39 +93,36 @@ export default function Home() {
                 </div>
                 <div>
                   <p>Payment Verified</p>
-                  <small>Auto-confirmed ✓</small>
+                  <small>Auto-confirmed ✅</small>
                 </div>
               </div>
 
               <div className={styles.phone}>
                 <div className={styles.phoneNotch} />
                 <div className={styles.phoneBar}>
-                  <div className={styles.phoneBarAvatar}>🇳🇬</div>
+                  <div className={styles.phoneBarAvatar}>🛒</div>
                   <div>
-                    <div className={styles.phoneBarName}>Naija BizBot</div>
-                    <div className={styles.phoneBarStatus}>● Online</div>
+                    <div className={styles.phoneBarName}>My Shop Bot</div>
+                    <div className={styles.phoneBarStatus}>🟢 Online</div>
                   </div>
                 </div>
                 <div className={styles.chatBody}>
                   <div className={`${styles.msg} ${styles.msgIn}`} style={{ animationDelay: "0.4s" }}>
-                    Good morning! Abeg, show me your latest deals 🙏
+                    Hi! Do you have the AirPods in stock? And what's the price?
                   </div>
                   <div className={`${styles.msg} ${styles.msgOut}`} style={{ animationDelay: "1.0s" }}>
-                    Oya! See our best sellers today 🛍️
+                    Yes, we do! The AirPods are in stock for ₦45,000. Should I add them to your cart? 🎧
                   </div>
-                  <div className={`${styles.productCard} `} style={{ animationDelay: "1.6s" }}>
-                    <div className={styles.productCardImg} />
-                    <div>
-                      <div className={styles.productCardName}>Naija Smart Watch</div>
-                      <div className={styles.productCardPrice}>₦45,000</div>
-                    </div>
-                    <button className={styles.addBtn}>Add</button>
+                  <div className={`${styles.msg} ${styles.msgIn}`} style={{ animationDelay: "1.6s" }}>
+                    Yes please, and add a black case too. I'm ready to pay.
                   </div>
-                  <div className={`${styles.msg} ${styles.msgIn}`} style={{ animationDelay: "2.4s" }}>
-                    I go buy am! How I go pay? 💳
+                  <div className={`${styles.msg} ${styles.msgOut}`} style={{ animationDelay: "2.4s" }}>
+                    Got it! Your total is ₦50,000. Click here to pay safely online:
+                    <br/><br/>
+                    <a href="#" style={{ color: "#25D366", fontWeight: "bold" }}>paystack.com/pay/chatbiz</a>
                   </div>
                   <div className={`${styles.msg} ${styles.msgOut}`} style={{ animationDelay: "3.2s" }}>
-                    Click the link to pay with your bank or card. E easy! ✅
+                    ✅ Payment Received! Your order #4202 is confirmed. Thanks for buying!
                   </div>
                 </div>
                 <div className={styles.phoneHomeBar} />
@@ -139,7 +134,7 @@ export default function Home() {
 
       {/* ── LOGO BAR ── */}
       <section className={styles.logoBar}>
-        <p className={styles.logoBarLabel}>TRUSTED BY NIGERIAN BUSINESSES NATIONWIDE</p>
+        <p className={styles.logoBarLabel}>TRUSTED BY NIGERIAN VENDORS EVERYWHERE</p>
         <div className={styles.logoScroll}>
           {["BrandOne", "ShopFast", "QuickCommerce", "StyleHub", "TechStore NG", "AbujaShop", "LagosDeals"].map(b => (
             <span key={b}>{b}</span>
@@ -150,14 +145,14 @@ export default function Home() {
       {/* ── HOW IT WORKS ── */}
       <section className={styles.how} id="how">
         <div className={styles.sectionLabel}>How it works</div>
-        <h2 className={styles.sectionTitle}>Set up in 3 simple steps</h2>
-        <p className={styles.sectionSub}>No technical skills needed. Be live in under 10 minutes.</p>
+        <h2 className={styles.sectionTitle}>Start selling in 3 easy steps</h2>
+        <p className={styles.sectionSub}>No coding or tech skills needed. Set up your shop in 1 minute.</p>
 
         <div className={styles.steps}>
           {[
-            { num: "01", icon: <MessageSquare size={28} />, title: "Connect WhatsApp", body: "Link your WhatsApp Business number and configure your webhook in just a few clicks." },
-            { num: "02", icon: <Package size={28} />, title: "Add Products", body: "Upload your catalog with photos, prices and stock levels. Your bot is ready instantly." },
-            { num: "03", icon: <DollarSign size={28} />, title: "Start Selling", body: "Customers chat, order and pay — all automatically, 24/7, even while you sleep." }
+            { num: "01", icon: <MessageSquare size={28} />, title: "Connect WhatsApp", body: "Just click one button to link your WhatsApp Business number. No confusing API keys required." },
+            { num: "02", icon: <Package size={28} />, title: "Add Your Items", body: "Upload pictures and prices of what you sell. We will arrange them perfectly for your customers to see." },
+            { num: "03", icon: <DollarSign size={28} />, title: "Make Money", body: "Customers chat with your bot, place orders, and pay instantly. You just wake up to bank alerts." }
           ].map(s => (
             <div className={styles.step} key={s.num}>
               <div className={styles.stepNum}>{s.num}</div>
@@ -172,49 +167,49 @@ export default function Home() {
       {/* ── FEATURES ── */}
       <section className={styles.features} id="features">
         <div className={styles.sectionLabel}>Features</div>
-        <h2 className={styles.sectionTitle}>Everything you need to <span className={styles.greenText}>scale</span></h2>
-        <p className={styles.sectionSub}>Powerful tools built for the Nigerian market.</p>
+        <h2 className={styles.sectionTitle}>Everything you need to <span className={styles.greenText}>grow</span></h2>
+        <p className={styles.sectionSub}>Built to solve the real problems of selling in Nigeria.</p>
 
         <div className={styles.featureGrid}>
           <div className={`${styles.featureCard} ${styles.featureCardLarge}`}>
             <div className={styles.featureCardIcon} style={{ background: "rgba(37,211,102,0.12)", color: "#25D366" }}><Bot size={32} /></div>
-            <h3>24/7 Automated Ordering</h3>
-            <p>Your AI-powered WhatsApp bot handles orders around the clock. Never miss a sale — even at 3am.</p>
+            <h3>Smart WhatsApp Assistant</h3>
+            <p>Your bot replies to customers just like a real human. It answers their questions, helps them choose items, and can even send them pictures of your products when they ask.</p>
             <ul className={styles.featureList}>
-              <li><CheckCircle size={14} /> Smart product catalogue</li>
-              <li><CheckCircle size={14} /> Cart & checkout flow</li>
-              <li><CheckCircle size={14} /> Quantity & stock checks</li>
+              <li><CheckCircle size={14} /> Teach it how to talk to your customers</li>
+              <li><CheckCircle size={14} /> Never gets tired or angry</li>
+              <li><CheckCircle size={14} /> Takes orders 24/7</li>
             </ul>
           </div>
 
           <div className={styles.featureCard}>
             <div className={styles.featureCardIcon} style={{ background: "rgba(59,130,246,0.12)", color: "#3b82f6" }}><DollarSign size={28} /></div>
-            <h3>Payment Verification</h3>
-            <p>Customers send payment proof. You approve in one click and the order is confirmed automatically.</p>
+            <h3>No More "Send Account Number"</h3>
+            <p>The bot gives customers a secure Paystack link right in the chat. As soon as they pay, the order is confirmed automatically. No more fake alerts.</p>
           </div>
 
           <div className={styles.featureCard}>
             <div className={styles.featureCardIcon} style={{ background: "rgba(168,85,247,0.12)", color: "#a855f7" }}><BarChart3 size={28} /></div>
-            <h3>Live Analytics</h3>
-            <p>Track revenue, top products, loyal customers and monthly trends — all in one dashboard.</p>
+            <h3>Track Your Sales</h3>
+            <p>See your daily money, your best-selling items, and your most loyal customers easily from your phone.</p>
           </div>
 
           <div className={styles.featureCard}>
             <div className={styles.featureCardIcon} style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}><ZapIcon size={28} /></div>
-            <h3>Low Stock Alerts</h3>
-            <p>Get instant WhatsApp alerts when inventory runs low so you never oversell.</p>
+            <h3>Never Oversell Again</h3>
+            <p>When someone pays, the system removes that item from your stock immediately. If it finishes, the bot will stop selling it.</p>
           </div>
 
           <div className={styles.featureCard}>
             <div className={styles.featureCardIcon} style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444" }}><Users size={28} /></div>
-            <h3>Customer Sessions</h3>
-            <p>Every customer's cart and journey is tracked. Pick up right where they left off, always.</p>
+            <h3>It Remembers Customers</h3>
+            <p>If a customer gets distracted and comes back hours later, the bot remembers exactly what was in their cart.</p>
           </div>
 
           <div className={styles.featureCard}>
             <div className={styles.featureCardIcon} style={{ background: "rgba(20,184,166,0.12)", color: "#14b8a6" }}><TrendingUp size={28} /></div>
-            <h3>Sales Reports</h3>
-            <p>PDF invoices generated automatically for every order. Professional, branded, shareable.</p>
+            <h3>Professional Receipts</h3>
+            <p>Give your business a big-brand feel. The system generates fine PDF receipts for every customer after they pay.</p>
           </div>
         </div>
       </section>
