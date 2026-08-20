@@ -172,19 +172,27 @@ export default function SettingsForm({
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Meta WhatsApp Cloud API — Credentials</h2>
         <form action={handleApi} className={`card ${styles.form}`}>
-          <MetaLoginButton 
-            flowType="coexistence"
-            onLoginSuccess={async (token) => {
-              setAccessToken(token);
-              const result = await connectWhatsAppAccount(token);
-              if (result.success) {
-                apiToast.showSuccess("Successfully connected WhatsApp account!");
-                // Optionally reload or let React handle the revalidation
-              } else {
-                apiToast.showError(result.error || "Failed to fully configure account.");
-              }
-            }} 
-          />
+          
+          {(!initialPhoneNumberId || !initialMetaToken) ? (
+            <MetaLoginButton 
+              flowType="coexistence"
+              onLoginSuccess={async (token) => {
+                setAccessToken(token);
+                const result = await connectWhatsAppAccount(token);
+                if (result.success) {
+                  apiToast.showSuccess("Successfully connected WhatsApp account!");
+                  window.location.reload(); // Reload to populate fields
+                } else {
+                  apiToast.showError(result.error || "Failed to fully configure account.");
+                }
+              }} 
+            />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: '#16a34a', fontWeight: '500', padding: '0.75rem', backgroundColor: '#dcfce7', borderRadius: '0.5rem', border: '1px solid #bbf7d0' }}>
+              <CheckCircle2 size={18} />
+              <span>WhatsApp Connected via Embedded Signup</span>
+            </div>
+          )}
 
           <div className={styles.formGroup}>
             <label htmlFor="metaPhoneNumberId">Meta Phone Number ID</label>
