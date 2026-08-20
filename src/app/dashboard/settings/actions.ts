@@ -106,7 +106,10 @@ export async function connectWhatsAppAccount(codeOrToken: string) {
         return { success: false, error: "Server missing META_APP_SECRET environment variable to exchange OAuth code." };
       }
       
-      const tokenUrl = `https://graph.facebook.com/v21.0/oauth/access_token?client_id=4406781476230289&redirect_uri=${encodeURIComponent(process.env.NEXTAUTH_URL || "https://chatbiz.goanitech.com/")}&client_secret=${process.env.META_APP_SECRET}&code=${codeOrToken}`;
+      const clientId = process.env.NEXT_PUBLIC_META_APP_ID || "4406781476230289"; // Fallback to current app id if not set
+      
+      // When exchanging a code from FB.login (JS SDK), we MUST omit redirect_uri
+      const tokenUrl = `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${clientId}&client_secret=${process.env.META_APP_SECRET}&code=${codeOrToken}`;
       
       const tokenResponse = await fetch(tokenUrl);
       const tokenData = await tokenResponse.json();
