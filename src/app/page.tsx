@@ -1,16 +1,15 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import styles from "./page.module.css";
 import {
-  MessageSquare, Rocket, Bot, DollarSign, BarChart3,
-  ZapIcon, CheckCircle, ArrowRight, Star, Globe,
-  ShieldCheck, Package, Clock, Users, TrendingUp
+  Rocket, Bot, DollarSign, CheckCircle, Star, Globe,
+  Package, Users, TrendingUp, ShieldCheck, CheckCheck, Mic
 } from "lucide-react";
 
 export default function Home() {
   return (
     <div className={styles.page}>
 
-      {/* ── NAVBAR ── */}
+      {/* NAVBAR */}
       <nav className={styles.navbar}>
         <div className={styles.logo}>
           <img src="/logo.png" alt="ChatBiz Logo" style={{ width: 24, height: 24 }} />
@@ -20,229 +19,171 @@ export default function Home() {
           <a href="#features" className={styles.navLink}>Features</a>
           <a href="#how" className={styles.navLink}>How it works</a>
           <a href="#pricing" className={styles.navLink}>Pricing</a>
-          <Link href="/login" className={styles.navLink}>Login</Link>
-          <Link href="/register" className={styles.navCta}>Get Started Free</Link>
+        </div>
+        <div className={styles.navActions}>
+          <Link href="/login" className={styles.navLogin}>Sign In</Link>
+          <Link href="/register" className={styles.navSignup}>Get Started</Link>
         </div>
       </nav>
 
-      {/* ── HERO ── */}
+      {/* HERO SECTION */}
       <section className={styles.hero}>
-        <div className={styles.orb1} />
-        <div className={styles.orb2} />
-        <div className={styles.orb3} />
-
         <div className={styles.heroInner}>
+          
+          {/* Left: Copy */}
           <div className={styles.heroLeft}>
             <div className={styles.badge}>
-              <span className={styles.badgeDot} />
-              Now with a Smart AI Assistant 🚀
+              <ShieldCheck size={16} /> Trusted by 500+ Nigerian Vendors
             </div>
-
+            
             <h1 className={styles.heroTitle}>
-              Make sales while you<br />
-              <span className={styles.gradientText}>sleep.</span>
+              Sell on WhatsApp.<br/>
+              Wake up to <span>Bank Alerts.</span>
             </h1>
-
+            
             <p className={styles.heroSub}>
-              Stop the "send account number" stress. ChatBiz gives you a smart WhatsApp assistant that replies customers, takes orders, and collects payment instantly.
+              Stop typing "send account number" and losing track of stock. ChatBiz is an AI assistant that talks to your customers, takes their orders, and confirms Paystack payments directly inside WhatsApp while you sleep.
             </p>
-
+            
             <div className={styles.heroActions}>
               <Link href="/register" className={styles.ctaPrimary}>
-                Start for Free <Rocket size={18} />
+                Start For Free <Rocket size={18} />
               </Link>
-              <a href="#how" className={styles.ctaGhost}>
-                See how it works <ArrowRight size={16} />
-              </a>
             </div>
-
-            <div className={styles.heroStats}>
-              <div className={styles.statPill}>
-                <strong>500+</strong>
-                <span>Vendors</span>
+            
+            <div className={styles.trustRow}>
+              <div className={styles.trustAvatarGroup}>
+                <div className={styles.trustAvatar}>O</div>
+                <div className={styles.trustAvatar}>C</div>
+                <div className={styles.trustAvatar}>F</div>
               </div>
-              <div className={styles.statDivider} />
-              <div className={styles.statPill}>
-                <strong>10k+</strong>
-                <span>Orders Sold</span>
-              </div>
-              <div className={styles.statDivider} />
-              <div className={styles.statPill}>
-                <strong>24/7</strong>
-                <span>Active</span>
+              <div className={styles.trustText}>
+                Join Amara, Chidi, and <strong>500+ others</strong> growing their business.
               </div>
             </div>
           </div>
 
-          {/* Phone mockup */}
+          {/* Right: Signature WhatsApp Mockup */}
           <div className={styles.heroRight}>
-            <div className={styles.phoneWrap}>
-              {/* Notification cards */}
-              <div className={`${styles.notifCard} ${styles.notif1}`}>
-                <div className={styles.notifIcon} style={{ background: "#dcfce7", color: "#15803d" }}>
-                  <Package size={16} />
+            <div className={styles.mockupPhone}>
+              
+              <div className={styles.mockupHeader}>
+                <div className={styles.mockupAvatar}>
+                  <img src="/logo.png" alt="ChatBiz Logo" style={{ width: 20, height: 20 }} />
                 </div>
-                <div>
-                  <p>New Order #4202</p>
-                  <small>₦50,000.00 • just now</small>
-                </div>
-              </div>
-              <div className={`${styles.notifCard} ${styles.notif2}`}>
-                <div className={styles.notifIcon} style={{ background: "#dbeafe", color: "#1d4ed8" }}>
-                  <ShieldCheck size={16} />
-                </div>
-                <div>
-                  <p>Payment Verified</p>
-                  <small>Auto-confirmed ✅</small>
+                <div className={styles.mockupInfo}>
+                  <div className={styles.mockupName}>My Store Bot <CheckCircle size={14} color="#34D399" /></div>
+                  <div className={styles.mockupStatus}>typically replies instantly</div>
                 </div>
               </div>
 
-              <div className={styles.phone}>
-                <div className={styles.phoneNotch} />
-                <div className={styles.phoneBar}>
-                  <div className={styles.phoneBarAvatar}>🛒</div>
-                  <div>
-                    <div className={styles.phoneBarName}>My Shop Bot</div>
-                    <div className={styles.phoneBarStatus}>🟢 Online</div>
-                  </div>
+              <div className={styles.mockupBody}>
+                <div className={styles.chatBubble} style={{ alignSelf: "center", background: "rgba(0,0,0,0.05)", fontSize: "0.75rem", padding: "0.2rem 0.6rem" }}>Today</div>
+                
+                <div className={`${styles.chatBubble} ${styles.chatReceived}`}>
+                  Welcome to my store! I am the smart assistant here. How can I help you today?
+                  <span className={styles.chatTime}>10:42 AM</span>
                 </div>
-                <div className={styles.chatBody}>
-                  <div className={`${styles.msg} ${styles.msgIn}`} style={{ animationDelay: "0.4s" }}>
-                    Hi! Do you have the AirPods in stock? And what's the price?
-                  </div>
-                  <div className={`${styles.msg} ${styles.msgOut}`} style={{ animationDelay: "1.0s" }}>
-                    Yes, we do! The AirPods are in stock for ₦45,000. Should I add them to your cart? 🎧
-                  </div>
-                  <div className={`${styles.msg} ${styles.msgIn}`} style={{ animationDelay: "1.6s" }}>
-                    Yes please, and add a black case too. I'm ready to pay.
-                  </div>
-                  <div className={`${styles.msg} ${styles.msgOut}`} style={{ animationDelay: "2.4s" }}>
-                    Got it! Your total is ₦50,000. Click here to pay safely online:
-                    <br/><br/>
-                    <a href="#" style={{ color: "#25D366", fontWeight: "bold" }}>paystack.com/pay/chatbiz</a>
-                  </div>
-                  <div className={`${styles.msg} ${styles.msgOut}`} style={{ animationDelay: "3.2s" }}>
-                    ✅ Payment Received! Your order #4202 is confirmed. Thanks for buying!
-                  </div>
+
+                <div className={`${styles.chatBubble} ${styles.chatSent}`}>
+                  Do you still have the black sneakers in size 42?
+                  <span className={styles.chatTime}>10:45 AM <CheckCheck size={12} color="#34B7F1" style={{display: "inline", marginLeft: 2}}/></span>
                 </div>
-                <div className={styles.phoneHomeBar} />
+
+                <div className={`${styles.chatBubble} ${styles.chatReceived}`}>
+                  Yes, we have exactly 3 left in stock! It costs ?25,000. Would you like to place an order?
+                  <span className={styles.chatTime}>10:45 AM</span>
+                </div>
+
+                <div className={`${styles.chatBubble} ${styles.chatSent}`}>
+                  Yes please, I want to buy one.
+                  <span className={styles.chatTime}>10:46 AM <CheckCheck size={12} color="#34B7F1" style={{display: "inline", marginLeft: 2}}/></span>
+                </div>
+
+                <div className={`${styles.chatBubble} ${styles.chatReceived}`}>
+                  Great! Here is your secure payment link. Once paid, I will process your order immediately.
+                  <div className={styles.chatAction}>
+                    Pay ?25,000 via Paystack
+                  </div>
+                  <span className={styles.chatTime}>10:46 AM</span>
+                </div>
               </div>
+
+              <div className={styles.mockupFooter}>
+                <div className={styles.mockupInput}></div>
+                <div className={styles.mockupMic}><Mic size={18} /></div>
+              </div>
+
             </div>
           </div>
+          
         </div>
       </section>
 
-      {/* ── LOGO BAR ── */}
-      <section className={styles.logoBar}>
-        <p className={styles.logoBarLabel}>TRUSTED BY NIGERIAN VENDORS EVERYWHERE</p>
-        <div className={styles.logoScroll}>
-          {["BrandOne", "ShopFast", "QuickCommerce", "StyleHub", "TechStore NG", "AbujaShop", "LagosDeals"].map(b => (
-            <span key={b}>{b}</span>
-          ))}
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ── */}
+      {/* HOW IT WORKS */}
       <section className={styles.how} id="how">
-        <div className={styles.sectionLabel}>How it works</div>
-        <h2 className={styles.sectionTitle}>Start selling in 3 easy steps</h2>
-        <p className={styles.sectionSub}>No coding or tech skills needed. Set up your shop in 1 minute.</p>
+        <div className={styles.sectionLabel}>How It Works</div>
+        <h2 className={styles.sectionTitle}>Set up once, sell forever</h2>
+        <p className={styles.sectionSub}>No coding required. If you know how to use WhatsApp, you know how to use ChatBiz.</p>
 
         <div className={styles.steps}>
-          {[
-            { num: "01", icon: <MessageSquare size={28} />, title: "Connect WhatsApp", body: "Just click one button to link your WhatsApp Business number. No confusing API keys required." },
-            { num: "02", icon: <Package size={28} />, title: "Add Your Items", body: "Upload pictures and prices of what you sell. We will arrange them perfectly for your customers to see." },
-            { num: "03", icon: <DollarSign size={28} />, title: "Make Money", body: "Customers chat with your bot, place orders, and pay instantly. You just wake up to bank alerts." }
-          ].map(s => (
-            <div className={styles.step} key={s.num}>
-              <div className={styles.stepNum}>{s.num}</div>
-              <div className={styles.stepIcon}>{s.icon}</div>
-              <h3>{s.title}</h3>
-              <p>{s.body}</p>
-            </div>
-          ))}
+          <div className={styles.stepCard}>
+            <div className={styles.stepIcon}><Globe size={28} /></div>
+            <h3>1. Connect WhatsApp</h3>
+            <p>Link your WhatsApp Business number securely in two clicks using Meta Official APIs.</p>
+          </div>
+          <div className={styles.stepCard}>
+            <div className={styles.stepIcon}><Package size={28} /></div>
+            <h3>2. Add Your Items</h3>
+            <p>Upload your products, set your prices, and put in how many you have in stock.</p>
+          </div>
+          <div className={styles.stepCard}>
+            <div className={styles.stepIcon}><DollarSign size={28} /></div>
+            <h3>3. The Bot Sells For You</h3>
+            <p>The AI talks to customers exactly how you would, answers questions, and collects payments.</p>
+          </div>
         </div>
       </section>
 
-      {/* ── FEATURES ── */}
+      {/* FEATURES */}
       <section className={styles.features} id="features">
         <div className={styles.sectionLabel}>Features</div>
-        <h2 className={styles.sectionTitle}>Everything you need to <span className={styles.greenText}>grow</span></h2>
-        <p className={styles.sectionSub}>Built to solve the real problems of selling in Nigeria.</p>
-
+        <h2 className={styles.sectionTitle}>Built for Nigerian business realities</h2>
+        
         <div className={styles.featureGrid}>
-          <div className={`${styles.featureCard} ${styles.featureCardLarge}`}>
-            <div className={styles.featureCardIcon} style={{ background: "rgba(37,211,102,0.12)", color: "#25D366" }}><Bot size={32} /></div>
-            <h3>Smart WhatsApp Assistant</h3>
-            <p>Your bot replies to customers just like a real human. It answers their questions, helps them choose items, and can even send them pictures of your products when they ask.</p>
-            <ul className={styles.featureList}>
-              <li><CheckCircle size={14} /> Teach it how to talk to your customers</li>
-              <li><CheckCircle size={14} /> Never gets tired or angry</li>
-              <li><CheckCircle size={14} /> Takes orders 24/7</li>
-            </ul>
+          <div className={styles.featureCard}>
+            <div className={styles.featureCardIcon} style={{ background: "#DBEAFE", color: "#2563EB" }}><Bot size={28} /></div>
+            <h3>Sell While You Sleep</h3>
+            <p>Your shop never closes. The bot handles midnight inquiries and closes sales so you wake up to payment alerts.</p>
           </div>
 
           <div className={styles.featureCard}>
-            <div className={styles.featureCardIcon} style={{ background: "rgba(59,130,246,0.12)", color: "#3b82f6" }}><DollarSign size={28} /></div>
-            <h3>No More "Send Account Number"</h3>
-            <p>The bot gives customers a secure Paystack link right in the chat. As soon as they pay, the order is confirmed automatically. No more fake alerts.</p>
+            <div className={styles.featureCardIcon} style={{ background: "#DCFCE7", color: "#166534" }}><DollarSign size={28} /></div>
+            <h3>No More "Fake Alerts"</h3>
+            <p>Direct integration with Paystack ensures you only process orders when the money has actually hit your account.</p>
           </div>
 
           <div className={styles.featureCard}>
-            <div className={styles.featureCardIcon} style={{ background: "rgba(168,85,247,0.12)", color: "#a855f7" }}><BarChart3 size={28} /></div>
-            <h3>Track Your Sales</h3>
-            <p>See your daily money, your best-selling items, and your most loyal customers easily from your phone.</p>
-          </div>
-
-          <div className={styles.featureCard}>
-            <div className={styles.featureCardIcon} style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}><ZapIcon size={28} /></div>
+            <div className={styles.featureCardIcon} style={{ background: "#FEF3C7", color: "#D97706" }}><Package size={28} /></div>
             <h3>Never Oversell Again</h3>
-            <p>When someone pays, the system removes that item from your stock immediately. If it finishes, the bot will stop selling it.</p>
+            <p>When someone pays, the system removes that item from your stock immediately. If it finishes, the bot stops selling it.</p>
           </div>
 
           <div className={styles.featureCard}>
-            <div className={styles.featureCardIcon} style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444" }}><Users size={28} /></div>
+            <div className={styles.featureCardIcon} style={{ background: "#FEE2E2", color: "#DC2626" }}><Users size={28} /></div>
             <h3>It Remembers Customers</h3>
             <p>If a customer gets distracted and comes back hours later, the bot remembers exactly what was in their cart.</p>
           </div>
 
           <div className={styles.featureCard}>
-            <div className={styles.featureCardIcon} style={{ background: "rgba(20,184,166,0.12)", color: "#14b8a6" }}><TrendingUp size={28} /></div>
+            <div className={styles.featureCardIcon} style={{ background: "#CCFBF1", color: "#0F766E" }}><TrendingUp size={28} /></div>
             <h3>Professional Receipts</h3>
-            <p>Give your business a big-brand feel. The system generates fine PDF receipts for every customer after they pay.</p>
+            <p>Give your business a big-brand feel. The system generates PDF receipts for every customer after they pay.</p>
           </div>
         </div>
       </section>
 
-      {/* ── TESTIMONIALS ── */}
-      <section className={styles.testimonials}>
-        <div className={styles.sectionLabel}>Testimonials</div>
-        <h2 className={styles.sectionTitle}>Loved by business owners</h2>
-
-        <div className={styles.testimonialGrid}>
-          {[
-            { name: "Amara O.", role: "Fashion Boutique, Lagos", text: "ChatBiz completely transformed my business. I went from missing orders to processing 50+ per day automatically.", stars: 5 },
-            { name: "Chidi N.", role: "Electronics Store, Abuja", text: "My customers love the WhatsApp experience. Sales doubled in the first month. Setup took less than 15 minutes.", stars: 5 },
-            { name: "Fatima B.", role: "Food Business, Kano", text: "Finally a tool built for Nigerian businesses. The Naira payments and local bank support is exactly what I needed.", stars: 5 }
-          ].map(t => (
-            <div className={styles.testimonialCard} key={t.name}>
-              <div className={styles.stars}>
-                {Array.from({ length: t.stars }).map((_, i) => <Star key={i} size={14} fill="#f59e0b" color="#f59e0b" />)}
-              </div>
-              <p className={styles.testimonialText}>"{t.text}"</p>
-              <div className={styles.testimonialAuthor}>
-                <div className={styles.avatar}>{t.name[0]}</div>
-                <div>
-                  <div className={styles.authorName}>{t.name}</div>
-                  <div className={styles.authorRole}>{t.role}</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── PRICING ── */}
+      {/* PRICING */}
       <section className={styles.pricing} id="pricing">
         <div className={styles.sectionLabel}>Pricing</div>
         <h2 className={styles.sectionTitle}>Simple, honest pricing</h2>
@@ -265,7 +206,7 @@ export default function Home() {
           <div className={`${styles.pricingCard} ${styles.pricingCardPro}`}>
             <div className={styles.popularBadge}>Most Popular</div>
             <div className={styles.planName}>Pro</div>
-            <div className={styles.planPrice}>₦15,000 <span>/ month</span></div>
+            <div className={styles.planPrice}>?15,000 <span>/ month</span></div>
             <p className={styles.planDesc}>For growing businesses that need unlimited power.</p>
             <ul className={styles.planFeatures}>
               <li><CheckCircle size={15} /> Unlimited orders</li>
@@ -295,37 +236,26 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── FINAL CTA ── */}
+      {/* FINAL CTA */}
       <section className={styles.finalCta}>
-        <div className={styles.ctaBlob1} />
-        <div className={styles.ctaBlob2} />
-        <div className={styles.ctaInner}>
-          <div className={styles.ctaBadge}><Globe size={14} /> Built for Nigeria</div>
-          <h2>Ready to grow your business?</h2>
-          <p>Join 500+ entrepreneurs selling smarter on WhatsApp today.</p>
-          <div className={styles.ctaActions}>
-            <Link href="/register" className={styles.ctaPrimary}>
-              Get Started Free <Rocket size={18} />
-            </Link>
-            <Link href="/login" className={styles.ctaGhostDark}>
-              Sign In
-            </Link>
-          </div>
-          <div className={styles.ctaNote}>
-            <Clock size={13} /> Set up in under 10 minutes · No credit card required
-          </div>
-        </div>
+        <h2>Ready to grow your business?</h2>
+        <p>Join 500+ entrepreneurs selling smarter on WhatsApp today.</p>
+        <Link href="/register" className={styles.ctaPrimary}>
+          Get Started For Free
+        </Link>
       </section>
 
-      {/* ── FOOTER ── */}
+      {/* FOOTER */}
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
-          <div className={styles.footerBrand}>
+          <div className={styles.footerCol}>
             <div className={styles.logo} style={{ marginBottom: "1rem" }}>
-              <img src="/logo.png" alt="ChatBiz Logo" style={{ width: 20, height: 20 }} />
+              <img src="/logo.png" alt="ChatBiz Logo" style={{ width: 24, height: 24 }} />
               <span>ChatBiz</span>
             </div>
-            <p>Automating WhatsApp commerce for the next generation of Nigerian retailers.</p>
+            <p style={{ fontSize: "0.9rem", color: "#4B5563", lineHeight: 1.6, maxWidth: 250 }}>
+              Automating WhatsApp commerce for the next generation of Nigerian retailers.
+            </p>
           </div>
 
           <div className={styles.footerCol}>
