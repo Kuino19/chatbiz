@@ -90,8 +90,21 @@ export default function OnboardingClient() {
       )}
 
       {error && (
-        <div className={styles.errorAlert}>
-          {error}
+        <div className={styles.errorAlert} style={{ textAlign: "left", lineHeight: 1.5, fontSize: "0.85rem" }}>
+          <div style={{ fontWeight: "700", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontSize: "1rem" }}>⚠️</span> Connection Notice
+          </div>
+          <div>{error}</div>
+          {error.toLowerCase().includes("no whatsapp business account") && (
+            <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#4B5563" }}>
+              💡 <strong>Tip:</strong> Make sure you completed all steps in the Facebook popup and granted WhatsApp Business management permissions.
+            </div>
+          )}
+          {error.toLowerCase().includes("phone number") && (
+            <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#4B5563" }}>
+              💡 <strong>Tip:</strong> If your phone number is already active on a personal WhatsApp account, use the <strong>"I have an existing Business number"</strong> flow instead.
+            </div>
+          )}
         </div>
       )}
 

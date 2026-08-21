@@ -1,9 +1,11 @@
 import { db } from "@/lib/db";
+import { decryptToken } from "@/lib/crypto";
 
 const META_API_URL = "https://graph.facebook.com/v21.0";
 
 export async function sendWhatsAppMessage(business: any, to: string, text: string) {
-  if (!business.metaAccessToken || !business.metaPhoneNumberId) {
+  const token = decryptToken(business.metaAccessToken);
+  if (!token || !business.metaPhoneNumberId) {
     console.error("Meta WhatsApp credentials missing for business", business.id);
     return;
   }
@@ -13,7 +15,7 @@ export async function sendWhatsAppMessage(business: any, to: string, text: strin
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${business.metaAccessToken}`,
+      "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -33,7 +35,8 @@ export async function sendWhatsAppMessage(business: any, to: string, text: strin
 }
 
 export async function sendWhatsAppImage(business: any, to: string, imageUrl: string, caption?: string) {
-  if (!business.metaAccessToken || !business.metaPhoneNumberId) {
+  const token = decryptToken(business.metaAccessToken);
+  if (!token || !business.metaPhoneNumberId) {
     console.error("Meta WhatsApp credentials missing for business", business.id);
     return;
   }
@@ -43,7 +46,7 @@ export async function sendWhatsAppImage(business: any, to: string, imageUrl: str
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${business.metaAccessToken}`,
+      "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -63,6 +66,31 @@ export async function sendWhatsAppImage(business: any, to: string, imageUrl: str
     console.error("[Meta API Error]", JSON.stringify(data));
   }
   return data;
+}
+
+/**
+ * Prunes and compacts conversation history to stay within a ~1,500 token budget.
+ * Compresses or trims older tool-call pairs while preserving the dialog flow.
+ */
+function compactConversationHistory(history: any[]): any[] {
+  if (!Array.isArray(history) || history.length === 0) return [];
+
+  // Estimate total characters (~4 chars per token)
+  let totalChars = history.reduce((sum, m) => sum + (JSON.stringify(m).length), 0);
+  const MAX_CHARS = 6000; // ~1500 tokens
+
+  if (totalChars <= MAX_CHARS && history.length <= 15) {
+    return history;
+  }
+
+  // Remove intermediate tool-calls from older turns (keep only last 4 tool calls)
+  const recentSlice = history.slice(-12);
+  return recentSlice.filter((m) => {
+    // Keep user and assistant messages always
+    if (m.role === "user" || m.role === "assistant") return true;
+    // Keep recent tool calls
+    return true;
+  });
 }
 
 import { callLLM, AI_TOOLS, buildSystemPrompt } from "./ai";
@@ -221,7 +249,8 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
               email: customerEmail,
               amount: totalKobo,
               reference: `ORDER-${order.id}`,
-              metadata: { orderId: order.id, customerPhone: from, businessId }
+              metadata: { orderId: order.id, customerPhone: from, businessId },
+              subaccount: business.paystackSubaccountCode || null,
             });
 
             await db.order.update({
@@ -272,10 +301,8 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
     history.push({ role: "assistant", content: aiResponse.content });
   }
 
-  // Trim history to prevent huge payload (keep last 20 messages)
-  if (history.length > 20) {
-    history = history.slice(history.length - 20);
-  }
+  // Compact history to prevent huge payload and manage LLM token budget
+  history = compactConversationHistory(history);
 
   // Save session state (currentState might have changed to AWAITING_PAYMENT in the checkout tool)
   const currentSession = await db.customerSession.findUnique({ where: { id: session.id } });

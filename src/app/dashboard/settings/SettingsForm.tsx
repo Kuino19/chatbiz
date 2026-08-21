@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, Building2, Loader2, CreditCard } from "lucide-react";
 import styles from "./page.module.css";
 import toastStyles from "@/components/ToastContainer.module.css";
-import { saveProfile, saveApiSettings, sendTestMessage, connectWhatsAppAccount } from "./actions";
+import { saveProfile, saveApiSettings, sendTestMessage, connectWhatsAppAccount, verifyBankAccountAction } from "./actions";
 import MetaLoginButton from "@/components/MetaLoginButton";
+import { BankItem } from "@/lib/paystack";
 
 interface Props {
   businessId: string;
@@ -14,9 +15,12 @@ interface Props {
   initialMetaToken: string;
   initialPhoneNumberId: string;
   initialBankName: string;
+  initialBankCode: string;
   initialBankAccountNumber: string;
   initialBankAccountName: string;
+  initialSubaccountCode: string;
   initialBotPersonality: string;
+  bankList?: BankItem[];
 }
 
 interface ToastState {
@@ -33,15 +37,47 @@ function useFormToast() {
   return { toast, showSuccess: (m: string) => show("success", m), showError: (m: string) => show("error", m) };
 }
 
+// Fallback bank list if Paystack API call was empty
+const DEFAULT_BANKS = [
+  { code: "044", name: "Access Bank" },
+  { code: "023", name: "Citibank Nigeria" },
+  { code: "050", name: "Ecobank Nigeria" },
+  { code: "070", name: "Fidelity Bank" },
+  { code: "011", name: "First Bank of Nigeria" },
+  { code: "214", name: "First City Monument Bank (FCMB)" },
+  { code: "058", name: "Guaranty Trust Bank (GTBank)" },
+  { code: "030", name: "Heritage Bank" },
+  { code: "301", name: "Jaiz Bank" },
+  { code: "082", name: "Keystone Bank" },
+  { code: "50211", name: "Kuda Bank" },
+  { code: "565", name: "One Finance (Carbon)" },
+  { code: "999991", name: "PalmPay" },
+  { code: "999992", name: "OPay" },
+  { code: "076", name: "Polaris Bank" },
+  { code: "101", name: "Providus Bank" },
+  { code: "221", name: "Stanbic IBTC Bank" },
+  { code: "068", name: "Standard Chartered Bank" },
+  { code: "232", name: "Sterling Bank" },
+  { code: "100", name: "Suntrust Bank" },
+  { code: "032", name: "Union Bank of Nigeria" },
+  { code: "033", name: "United Bank for Africa (UBA)" },
+  { code: "215", name: "Unity Bank" },
+  { code: "035", name: "Wema Bank (ALAT)" },
+  { code: "057", name: "Zenith Bank" },
+];
+
 export default function SettingsForm({
   initialName,
   initialWhatsapp,
   initialMetaToken,
   initialPhoneNumberId,
   initialBankName,
+  initialBankCode,
   initialBankAccountNumber,
   initialBankAccountName,
+  initialSubaccountCode,
   initialBotPersonality,
+  bankList = [],
 }: Props) {
   const [accessToken, setAccessToken] = useState(initialMetaToken);
   const [profilePending, startProfile] = useTransition();
@@ -49,10 +85,67 @@ export default function SettingsForm({
   const profileToast = useFormToast();
   const apiToast = useFormToast();
 
+  const banks = bankList.length > 0 ? bankList : DEFAULT_BANKS;
+
+  const [selectedBankCode, setSelectedBankCode] = useState(initialBankCode || "");
+  const [selectedBankName, setSelectedBankName] = useState(initialBankName || "");
+  const [accountNumber, setAccountNumber] = useState(initialBankAccountNumber || "");
+  const [accountName, setAccountName] = useState(initialBankAccountName || "");
+  const [subaccountCode, setSubaccountCode] = useState(initialSubaccountCode || "");
+  const [isResolving, setIsResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+
+  // Auto-verify account name when 10 digits and bank selected
+  async function verifyAccount(bankCode: string, accNum: string) {
+    if (!bankCode || accNum.length !== 10) return;
+    setIsResolving(true);
+    setResolveError(null);
+
+    const res = await verifyBankAccountAction(bankCode, accNum);
+    setIsResolving(false);
+    if (res.success && res.accountName) {
+      setAccountName(res.accountName);
+      setResolveError(null);
+    } else {
+      setResolveError(res.error || "Could not verify account name.");
+    }
+  }
+
+  function handleBankChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const code = e.target.value;
+    setSelectedBankCode(code);
+    const bankObj = banks.find((b) => b.code === code);
+    if (bankObj) {
+      setSelectedBankName(bankObj.name);
+    }
+    if (accountNumber.trim().length === 10) {
+      verifyAccount(code, accountNumber.trim());
+    }
+  }
+
+  function handleAccountNumberChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+    setAccountNumber(val);
+    if (val.length === 10 && selectedBankCode) {
+      verifyAccount(selectedBankCode, val);
+    }
+  }
+
   function handleProfile(formData: FormData) {
+    formData.set("bankName", selectedBankName);
+    formData.set("bankCode", selectedBankCode);
+    formData.set("bankAccountName", accountName);
+    formData.set("bankAccountNumber", accountNumber);
+
     startProfile(async () => {
       const r = await saveProfile(formData);
-      r.success ? profileToast.showSuccess("Profile saved ✓") : profileToast.showError(r.error || "Save failed");
+      if (r.success) {
+        if (r.subaccountCode) setSubaccountCode(r.subaccountCode);
+        if (r.accountName) setAccountName(r.accountName);
+        profileToast.showSuccess("Profile & Paystack Subaccount saved ✓");
+      } else {
+        profileToast.showError(r.error || "Save failed");
+      }
     });
   }
 
@@ -101,9 +194,54 @@ export default function SettingsForm({
         </div>
       )}
 
-      {/* ── BUSINESS PROFILE ── */}
+
+      {/* ── BUSINESS PROFILE & DIRECT PAYOUT SETTINGS ── */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Business Profile</h2>
+        <h2 className={styles.sectionTitle}>Business Profile & Direct Bank Payouts</h2>
+        
+        {/* Direct Payouts Subaccount Status Banner */}
+        {subaccountCode ? (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+            background: "#ECFDF5",
+            border: "1px solid #A7F3D0",
+            borderRadius: "8px",
+            padding: "1rem",
+            marginBottom: "1rem",
+            color: "#065F46"
+          }}>
+            <CreditCard size={20} color="#059669" />
+            <div>
+              <div style={{ fontWeight: "700", fontSize: "0.9rem" }}>Direct Payouts Active (Paystack Subaccount)</div>
+              <div style={{ fontSize: "0.8rem", color: "#047857" }}>
+                Customer payments will route directly to your bank account via Paystack Subaccount: <code>{subaccountCode}</code>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+            background: "#FFFBEB",
+            border: "1px solid #FDE68A",
+            borderRadius: "8px",
+            padding: "1rem",
+            marginBottom: "1rem",
+            color: "#92400E"
+          }}>
+            <Building2 size={20} color="#D97706" />
+            <div>
+              <div style={{ fontWeight: "700", fontSize: "0.9rem" }}>Direct Settlement Setup Needed</div>
+              <div style={{ fontSize: "0.8rem", color: "#B45309" }}>
+                Enter your settlement bank details below to automatically configure your Paystack Subaccount so funds route directly to you.
+              </div>
+            </div>
+          </div>
+        )}
+
         <form action={handleProfile} className={`card ${styles.form}`}>
           <div className={styles.formGroup}>
             <label htmlFor="name">Business Name</label>
@@ -120,38 +258,85 @@ export default function SettingsForm({
             />
             <small className={styles.hint}>Receive low-stock alerts and order confirmations on your phone.</small>
           </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="bankName">Bank Name</label>
-            <input
-              id="bankName"
-              name="bankName"
-              type="text"
-              defaultValue={initialBankName}
-              placeholder="e.g. GTBank, Access Bank"
-            />
+
+          <div style={{ borderTop: "1px solid #E5E7EB", paddingTop: "1.25rem", marginTop: "0.5rem" }}>
+            <h3 style={{ fontSize: "1rem", fontWeight: "700", color: "#111827", marginBottom: "0.25rem" }}>
+              Settlement Bank Account (For Automated Payouts)
+            </h3>
+            <p style={{ fontSize: "0.85rem", color: "#6B7280", marginBottom: "1rem" }}>
+              Paystack will deposit customer payments directly into this account upon successful WhatsApp checkout.
+            </p>
+
+            <div className={styles.formGroup}>
+              <label htmlFor="bankSelect">Select Bank</label>
+              <select
+                id="bankSelect"
+                value={selectedBankCode}
+                onChange={handleBankChange}
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #D1D5DB",
+                  borderRadius: "6px",
+                  fontSize: "0.95rem",
+                  backgroundColor: "#fff",
+                }}
+              >
+                <option value="">-- Choose your Bank --</option>
+                {banks.map((b) => (
+                  <option key={b.code} value={b.code}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label htmlFor="bankAccountNumber">10-Digit Account Number (NUBAN)</label>
+              <div style={{ position: "relative" }}>
+                <input
+                  id="bankAccountNumber"
+                  type="text"
+                  value={accountNumber}
+                  onChange={handleAccountNumberChange}
+                  placeholder="0123456789"
+                  maxLength={10}
+                />
+                {isResolving && (
+                  <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)" }}>
+                    <Loader2 size={18} className={styles.spinner} style={{ animation: "spin 1s linear infinite" }} />
+                  </div>
+                )}
+              </div>
+              {resolveError && (
+                <small style={{ color: "#DC2626", fontWeight: "500", marginTop: "4px", display: "block" }}>
+                  {resolveError}
+                </small>
+              )}
+            </div>
+
+            <div className={styles.formGroup}>
+              <label htmlFor="bankAccountName">Verified Account Name</label>
+              <input
+                id="bankAccountName"
+                type="text"
+                value={accountName}
+                onChange={(e) => setAccountName(e.target.value)}
+                placeholder="Account name will be verified automatically"
+                style={{
+                  backgroundColor: accountName ? "#F0FDF4" : "#F9FAFB",
+                  borderColor: accountName ? "#86EFAC" : "#D1D5DB",
+                }}
+              />
+              <small className={styles.hint}>
+                {accountName
+                  ? "✓ Account verified with Nigeria Inter-Bank Settlement System (NIBSS)."
+                  : "Select a bank and enter 10 digits to auto-verify your name."}
+              </small>
+            </div>
           </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="bankAccountNumber">Account Number</label>
-            <input
-              id="bankAccountNumber"
-              name="bankAccountNumber"
-              type="text"
-              defaultValue={initialBankAccountNumber}
-              placeholder="0123456789"
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="bankAccountName">Account Name</label>
-            <input
-              id="bankAccountName"
-              name="bankAccountName"
-              type="text"
-              defaultValue={initialBankAccountName}
-              placeholder="Your name as on account"
-            />
-            <small className={styles.hint}>Customers will see these bank details when they checkout via WhatsApp.</small>
-          </div>
-          <div className={styles.formGroup}>
+
+          <div className={styles.formGroup} style={{ borderTop: "1px solid #E5E7EB", paddingTop: "1.25rem" }}>
             <label htmlFor="botPersonality">AI Bot Personality</label>
             <textarea
               id="botPersonality"
@@ -162,80 +347,82 @@ export default function SettingsForm({
             />
             <small className={styles.hint}>Instruct the AI on how to talk to your customers.</small>
           </div>
-          <button type="submit" className="btn btn-primary" disabled={profilePending}>
-            {profilePending ? "Saving…" : "Save Profile"}
+          <button type="submit" className="btn btn-primary" disabled={profilePending || isResolving}>
+            {profilePending ? "Saving & Syncing Subaccount…" : "Save Profile & Bank Details"}
           </button>
         </form>
       </section>
 
-      {/* ── META CLOUD API ── */}
+      {/* ── WHATSAPP BUSINESS CONNECTION ── */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Meta WhatsApp Cloud API — Credentials</h2>
-        <form action={handleApi} className={`card ${styles.form}`}>
-          
+        <h2 className={styles.sectionTitle}>WhatsApp Business Connection</h2>
+        <div className={`card ${styles.form}`}>
           {(!initialPhoneNumberId || !initialMetaToken) ? (
-            <MetaLoginButton 
-              flowType="coexistence"
-              onLoginSuccess={async (token) => {
-                setAccessToken(token);
-                const result = await connectWhatsAppAccount(token);
-                if (result.success) {
-                  apiToast.showSuccess("Successfully connected WhatsApp account!");
-                  window.location.reload(); // Reload to populate fields
-                } else {
-                  apiToast.showError(result.error || "Failed to fully configure account.");
-                }
-              }} 
-            />
+            <div>
+              <p style={{ fontSize: "0.9rem", color: "#4B5563", marginBottom: "1.25rem" }}>
+                Connect your WhatsApp Business number to activate your 24/7 AI sales assistant.
+              </p>
+              <MetaLoginButton 
+                flowType="coexistence"
+                onLoginSuccess={async (token) => {
+                  setAccessToken(token);
+                  const result = await connectWhatsAppAccount(token);
+                  if (result.success) {
+                    apiToast.showSuccess("Successfully connected WhatsApp account!");
+                    window.location.reload();
+                  } else {
+                    apiToast.showError(result.error || "Failed to configure account.");
+                  }
+                }} 
+              />
+            </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: '#16a34a', fontWeight: '500', padding: '0.75rem', backgroundColor: '#dcfce7', borderRadius: '0.5rem', border: '1px solid #bbf7d0' }}>
-              <CheckCircle2 size={18} />
-              <span>WhatsApp Connected via Embedded Signup</span>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem", backgroundColor: "#dcfce7", borderRadius: "0.5rem", border: "1px solid #bbf7d0", marginBottom: "1.25rem" }}>
+                <CheckCircle2 size={22} color="#16a34a" />
+                <div>
+                  <div style={{ fontWeight: "700", color: "#166534", fontSize: "0.95rem" }}>WhatsApp Connected & Active</div>
+                  <div style={{ fontSize: "0.85rem", color: "#15803d" }}>
+                    Connected Line: <strong>{initialWhatsapp || "Official WhatsApp Business Line"}</strong> &bull; 24/7 AI Sales Assistant is Online
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <MetaLoginButton 
+                  flowType="coexistence"
+                  onLoginSuccess={async (token) => {
+                    setAccessToken(token);
+                    const result = await connectWhatsAppAccount(token);
+                    if (result.success) {
+                      apiToast.showSuccess("WhatsApp connection updated!");
+                      window.location.reload();
+                    } else {
+                      apiToast.showError(result.error || "Failed to update connection.");
+                    }
+                  }} 
+                />
+              </div>
             </div>
           )}
-
-          <div className={styles.formGroup}>
-            <label htmlFor="metaPhoneNumberId">Meta Phone Number ID</label>
-            <input
-              id="metaPhoneNumberId"
-              name="metaPhoneNumberId"
-              type="text"
-              defaultValue={initialPhoneNumberId}
-              placeholder="From Meta Developer → WhatsApp → Phone Numbers"
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label htmlFor="metaAccessToken">Meta Permanent Access Token</label>
-            <input
-              id="metaAccessToken"
-              name="metaAccessToken"
-              type="password"
-              value={accessToken}
-              onChange={(e) => setAccessToken(e.target.value)}
-              placeholder="••••••••"
-            />
-          </div>
-          <button type="submit" className="btn btn-primary" disabled={apiPending}>
-            {apiPending ? "Saving…" : "Save API Settings"}
-          </button>
-        </form>
+        </div>
       </section>
 
-      {/* ── APP REVIEW TEST MESSAGE ── */}
+      {/* ── TEST WHATSAPP BOT ── */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>App Review: Send Test Message</h2>
+        <h2 className={styles.sectionTitle}>Test WhatsApp Bot</h2>
         <form action={handleTestMessage} className={`card ${styles.form}`}>
           <div className={styles.formGroup}>
-            <label htmlFor="testNumber">Your WhatsApp Number (e.g. 2348012345678)</label>
+            <label htmlFor="testNumber">Your WhatsApp Phone Number</label>
             <input
               id="testNumber"
               name="testNumber"
               type="text"
-              placeholder="Include country code, no +, no spaces"
+              placeholder="e.g. 2348012345678 (include country code, no +)"
               required
             />
             <small className={styles.hint}>
-              Click the button below to send the official Meta test template message to your phone. You can record your screen while doing this to submit for your App Review!
+              Enter your WhatsApp number to receive an instant test message and verify your store bot is online.
             </small>
           </div>
           <button type="submit" className="btn btn-primary" disabled={testPending}>

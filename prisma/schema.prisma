@@ -68,8 +68,10 @@ model Business {
   metaTokenExpiresAt   DateTime?
   onboardingCompleted  Boolean   @default(false)
   bankName             String?
+  bankCode             String?
   bankAccountNumber    String?
   bankAccountName      String?
+  paystackSubaccountCode String?
   botPersonality       String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt

@@ -22,6 +22,26 @@ export async function GET(req: NextRequest) {
   return new NextResponse("Forbidden", { status: 403 });
 }
 
+// In-memory cache for message deduplication (keeps message IDs for 10 minutes)
+const processedMessageIds = new Map<string, number>();
+
+function isDuplicateMessage(msgId: string): boolean {
+  const now = Date.now();
+  // Clean up expired IDs older than 10 mins (600,000 ms)
+  for (const [id, timestamp] of processedMessageIds.entries()) {
+    if (now - timestamp > 600000) {
+      processedMessageIds.delete(id);
+    }
+  }
+
+  if (processedMessageIds.has(msgId)) {
+    return true;
+  }
+
+  processedMessageIds.set(msgId, now);
+  return false;
+}
+
 // --- POST: incoming messages / status updates ---
 export async function POST(req: NextRequest) {
   try {
@@ -49,9 +69,15 @@ export async function POST(req: NextRequest) {
 
         if (messages && messages.length > 0) {
           for (const msg of messages) {
+            const msgId = msg.id;
+            if (msgId && isDuplicateMessage(msgId)) {
+              console.log(`[Deduplication] Ignoring duplicate message ${msgId}`);
+              continue;
+            }
+
             const from = msg.from; // sender's WhatsApp number
             
-            // Await the message processing so Vercel doesn't freeze the function
+            // Await the message processing so serverless doesn't freeze prematurely
             await processWhatsAppMessage(business.id, from, msg).catch(err => {
               console.error("Error processing WhatsApp message:", err);
             });

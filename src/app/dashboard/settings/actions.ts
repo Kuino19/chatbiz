@@ -3,25 +3,102 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { listBanks, resolveAccountNumber, createOrUpdateSubaccount } from "@/lib/paystack";
+import { encryptToken, decryptToken } from "@/lib/crypto";
+
+export async function getBankListAction() {
+  return await listBanks();
+}
+
+export async function verifyBankAccountAction(bankCode: string, accountNumber: string) {
+  if (!bankCode || !accountNumber || accountNumber.length !== 10) {
+    return { success: false, error: "Please provide a valid 10-digit account number and select a bank." };
+  }
+
+  try {
+    const data = await resolveAccountNumber({ accountNumber, bankCode });
+    if (data && data.account_name) {
+      return { success: true, accountName: data.account_name };
+    }
+    return { success: false, error: "Could not resolve account." };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to verify account details with bank." };
+  }
+}
 
 export async function saveProfile(formData: FormData) {
   const session = await auth();
   if (!session?.user) return { success: false, error: "Not authenticated" };
 
   try {
+    const business = await db.business.findUnique({
+      where: { userId: session.user.id },
+    });
+
+    if (!business) return { success: false, error: "Business not found" };
+
+    const name = (formData.get("name") as string) || business.name;
+    const whatsappNumber = formData.get("whatsappNumber") as string;
+    const bankName = (formData.get("bankName") as string) || null;
+    const bankCode = (formData.get("bankCode") as string) || null;
+    const bankAccountNumber = (formData.get("bankAccountNumber") as string) || null;
+    let bankAccountName = (formData.get("bankAccountName") as string) || null;
+    const botPersonality = (formData.get("botPersonality") as string) || null;
+
+    let subaccountCode = business.paystackSubaccountCode;
+
+    // If bank details provided, create or update Paystack subaccount
+    if (bankCode && bankAccountNumber && bankAccountNumber.trim().length === 10) {
+      try {
+        // Resolve account name if not provided or to ensure accuracy
+        const resolved = await resolveAccountNumber({
+          accountNumber: bankAccountNumber.trim(),
+          bankCode: bankCode.trim(),
+        });
+        if (resolved?.account_name) {
+          bankAccountName = resolved.account_name;
+        }
+
+        const subaccountResult = await createOrUpdateSubaccount({
+          businessName: name,
+          settlementBank: bankCode.trim(),
+          accountNumber: bankAccountNumber.trim(),
+          subaccountCode: business.paystackSubaccountCode,
+        });
+
+        if (subaccountResult?.subaccount_code) {
+          subaccountCode = subaccountResult.subaccount_code;
+        }
+      } catch (paystackErr: any) {
+        console.error("Paystack Subaccount Setup Error:", paystackErr);
+        return {
+          success: false,
+          error: `Paystack Subaccount error: ${paystackErr.message || "Invalid bank details."}`,
+        };
+      }
+    }
+
     await db.business.update({
       where: { userId: session.user.id },
       data: {
-        name: formData.get("name") as string,
-        whatsappNumber: formData.get("whatsappNumber") as string,
-        bankName: (formData.get("bankName") as string) || null,
-        bankAccountNumber: (formData.get("bankAccountNumber") as string) || null,
-        bankAccountName: (formData.get("bankAccountName") as string) || null,
-        botPersonality: (formData.get("botPersonality") as string) || null,
+        name,
+        whatsappNumber,
+        bankName,
+        bankCode,
+        bankAccountNumber,
+        bankAccountName,
+        paystackSubaccountCode: subaccountCode,
+        botPersonality,
       },
     });
+
     revalidatePath("/dashboard/settings");
-    return { success: true };
+    revalidatePath("/dashboard");
+    return {
+      success: true,
+      subaccountCode,
+      accountName: bankAccountName,
+    };
   } catch (e: any) {
     return { success: false, error: e.message as string };
   }
@@ -32,10 +109,13 @@ export async function saveApiSettings(formData: FormData) {
   if (!session?.user) return { success: false, error: "Not authenticated" };
 
   try {
+    const rawToken = (formData.get("metaAccessToken") as string || "").trim();
+    const encryptedToken = rawToken ? encryptToken(rawToken) : undefined;
+
     await db.business.update({
       where: { userId: session.user.id },
       data: {
-        metaAccessToken: (formData.get("metaAccessToken") as string).trim(),
+        ...(encryptedToken && { metaAccessToken: encryptedToken }),
         metaPhoneNumberId: (formData.get("metaPhoneNumberId") as string).trim(),
       },
     });
@@ -59,32 +139,69 @@ export async function sendTestMessage(formData: FormData) {
       return { success: false, error: "Missing API credentials" };
     }
 
-    const testNumber = formData.get("testNumber") as string;
+    let testNumber = (formData.get("testNumber") as string || "").trim();
     if (!testNumber) return { success: false, error: "No test number provided" };
+
+    // Sanitize phone number to digits only
+    let cleanNumber = testNumber.replace(/\D/g, "");
+    // If entered as 080... (11 digits in Nigeria), convert to 23480...
+    if (cleanNumber.length === 11 && cleanNumber.startsWith("0")) {
+      cleanNumber = "234" + cleanNumber.slice(1);
+    }
+
+    const plainToken = decryptToken(business.metaAccessToken);
+    if (!plainToken) {
+      return { success: false, error: "Failed to decrypt API access token" };
+    }
 
     const url = `https://graph.facebook.com/v21.0/${business.metaPhoneNumberId}/messages`;
     
-    // We send a simple text message or the exact template Meta suggested.
-    // The requirement says: "Embed the cURL command from step 2 into your website and record how you send a message."
-    const response = await fetch(url, {
+    // Meta requires an approved template (like 'hello_world') when initiating contact outside 24h window
+    let response = await fetch(url, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${business.metaAccessToken}`,
+        "Authorization": `Bearer ${plainToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         messaging_product: "whatsapp",
-        to: testNumber,
-        type: "text",
-        text: {
-          body: "What can I help you today?"
+        to: cleanNumber,
+        type: "template",
+        template: {
+          name: "hello_world",
+          language: { code: "en_US" }
         }
       }),
     });
 
-    const data = await response.json();
+    let data = await response.json();
+
+    // If template fails (e.g. template not created in WABA yet), try fallback to text message
     if (!response.ok) {
-      return { success: false, error: data.error?.message || "Failed to send test message" };
+      console.warn("Template test message failed, trying fallback text:", data);
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${plainToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: cleanNumber,
+          type: "text",
+          text: {
+            body: `Hello from ${business.name}! Your ChatBiz WhatsApp bot is online and working properly.`
+          }
+        }),
+      });
+
+      data = await response.json();
+    }
+
+    if (!response.ok) {
+      console.error("[sendTestMessage Error]", JSON.stringify(data));
+      const errorMsg = data.error?.message || "Failed to send test message.";
+      return { success: false, error: errorMsg };
     }
 
     return { success: true };
@@ -155,9 +272,6 @@ export async function connectWhatsAppAccount(codeOrToken: string) {
     const displayPhoneNumber = phoneData.data[0].display_phone_number;
 
     // 3. Subscribe the App to the Webhook for this WABA
-    // This requires the Tech Provider's System User Token, but the user's token with whatsapp_business_management might suffice if our App is configured correctly.
-    // NOTE: Webhook subscriptions are often done at the App level for Tech Providers. 
-    // We will attempt to subscribe the WABA.
     const subscribeResponse = await fetch(`https://graph.facebook.com/v21.0/${wabaId}/subscribed_apps`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -167,11 +281,14 @@ export async function connectWhatsAppAccount(codeOrToken: string) {
       console.warn("Failed to subscribe WABA to webhook (App might already be globally subscribed)", await subscribeResponse.json());
     }
 
-    // 4. Update Business in Database
+    // 4. Encrypt Access Token before storing in Database
+    const encryptedToken = encryptToken(accessToken);
+
+    // 5. Update Business in Database
     await db.business.update({
       where: { userId: session.user.id },
       data: {
-        metaAccessToken: accessToken,
+        metaAccessToken: encryptedToken,
         wabaId: wabaId,
         metaPhoneNumberId: phoneNumberId,
         whatsappNumber: displayPhoneNumber,

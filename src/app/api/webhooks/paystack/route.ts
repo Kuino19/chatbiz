@@ -20,48 +20,62 @@ export async function POST(req: NextRequest) {
     if (payload.event === "charge.success") {
       const { reference, amount, metadata } = payload.data;
 
-      const order = await db.order.findUnique({
-        where: { paystackReference: reference },
-        include: { business: true, items: true },
-      });
-
-      if (!order) {
-        console.error(`Order not found for Paystack reference ${reference}`);
-        return NextResponse.json({ received: true });
-      }
-
-      // Check if already paid to prevent duplicate webhook processing
-      if (order.status === "PAID") {
-        return NextResponse.json({ received: true });
-      }
-
-      // Verify amount (Paystack amount is in kobo)
-      const expectedAmountKobo = Math.round(order.totalAmount * 100);
-      if (amount < expectedAmountKobo) {
-        console.error(`Insufficient amount paid for order ${order.id}. Expected ${expectedAmountKobo}, got ${amount}`);
-        return NextResponse.json({ error: "Insufficient amount paid" }, { status: 400 });
-      }
-
-      // Mark order as PAID
-      await db.order.update({
-        where: { id: order.id },
-        data: { status: "PAID" },
-      });
-
-      // Decrease stock for items
-      for (const item of order.items) {
-        await db.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
+      // Atomic interactive transaction to guarantee single execution & prevent race conditions
+      const result = await db.$transaction(async (tx) => {
+        const order = await tx.order.findUnique({
+          where: { paystackReference: reference },
+          include: { business: true, items: true },
         });
+
+        if (!order) {
+          return { error: "Order not found", status: 404 };
+        }
+
+        // Idempotency: If already marked as PAID by a previous webhook execution, exit cleanly
+        if (order.status === "PAID") {
+          return { alreadyProcessed: true, order };
+        }
+
+        // Verify amount paid against order total (Paystack amount is in kobo)
+        const expectedAmountKobo = Math.round(order.totalAmount * 100);
+        if (amount < expectedAmountKobo) {
+          console.error(`Insufficient amount paid for order ${order.id}. Expected ${expectedAmountKobo}, got ${amount}`);
+          return { error: "Insufficient amount paid", status: 400 };
+        }
+
+        // Update Order Status atomically
+        await tx.order.update({
+          where: { id: order.id },
+          data: { status: "PAID" },
+        });
+
+        // Decrement stock atomically with concurrency protection
+        for (const item of order.items) {
+          await tx.product.updateMany({
+            where: { id: item.productId, stock: { gte: item.quantity } },
+            data: { stock: { decrement: item.quantity } },
+          });
+        }
+
+        return { success: true, order };
+      });
+
+      if (result.error) {
+        return NextResponse.json({ error: result.error }, { status: result.status || 400 });
       }
 
-      // Send confirmation to Customer
+      if (result.alreadyProcessed) {
+        return NextResponse.json({ received: true, note: "Already processed" }, { status: 200 });
+      }
+
+      const order = result.order!;
+
+      // Send confirmation to Customer (outside DB transaction)
       await sendWhatsAppMessage(
         order.business,
         order.customerPhone,
         `✅ Payment Received!\nYour order #${order.id.slice(-6).toUpperCase()} has been confirmed and is now being processed. Thank you for shopping with ${order.business.name}!`
-      );
+      ).catch((err) => console.error("Error sending customer receipt:", err));
 
       // Send confirmation to Business Owner
       if (order.business.whatsappNumber) {
@@ -69,7 +83,7 @@ export async function POST(req: NextRequest) {
           order.business,
           order.business.whatsappNumber.replace("+", ""),
           `💰 *New Payment Received*\nOrder #${order.id.slice(-6).toUpperCase()} for ₦${order.totalAmount} has been paid via Paystack.\nPlease check your dashboard.`
-        );
+        ).catch((err) => console.error("Error sending merchant alert:", err));
       }
     }
 
