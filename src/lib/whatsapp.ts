@@ -115,10 +115,22 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
     });
   }
 
-  const messageType = message.type;
-  
+  const messageType = message?.type || "text";
+
+  // Extract text from text messages, interactive button replies, list selections, and image captions
+  let userText = "";
+  if (messageType === "text" && message.text?.body) {
+    userText = message.text.body;
+  } else if (messageType === "interactive") {
+    userText = message.interactive?.button_reply?.title || message.interactive?.list_reply?.title || message.interactive?.button_reply?.id || "";
+  } else if (messageType === "button") {
+    userText = message.button?.text || message.button?.payload || "";
+  } else if (messageType === "image" && message.image?.caption) {
+    userText = message.image.caption;
+  }
+
   // Quick reset command for testing/stuck users
-  if (messageType === "text" && message.text.body.toLowerCase().trim() === "reset") {
+  if (userText.toLowerCase().trim() === "reset") {
     await db.customerSession.update({
       where: { id: session.id },
       data: { currentState: "ACTIVE", cartData: "[]", conversationHistory: "[]" }
@@ -129,7 +141,7 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
 
   if (session.currentState === "AWAITING_PAYMENT") {
     // If they are awaiting payment but typed 'cancel', let them cancel
-    if (messageType === "text" && message.text.body.toLowerCase().trim() === "cancel") {
+    if (userText.toLowerCase().trim() === "cancel") {
       await db.customerSession.update({
         where: { id: session.id },
         data: { currentState: "ACTIVE", cartData: "[]", conversationHistory: "[]" }
@@ -152,13 +164,19 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
     return;
   }
 
-  // Handle only text messages for now in the AI loop
-  if (messageType !== "text") {
-    await sendWhatsAppMessage(business, from, "I can only process text messages right now.");
+  // If no textual content could be extracted, provide friendly contextual guidance
+  if (!userText.trim()) {
+    if (messageType === "audio" || messageType === "voice") {
+      await sendWhatsAppMessage(business, from, "🎙️ Voice notes are not supported yet. Please send your question as text!");
+    } else if (messageType === "image") {
+      await sendWhatsAppMessage(business, from, "📷 Please type the name of the product you're looking for and I'll find it for you!");
+    } else if (messageType === "sticker" || messageType === "reaction") {
+      await sendWhatsAppMessage(business, from, "👋 Hello! How can I help you today? Ask me about any of our products!");
+    } else {
+      await sendWhatsAppMessage(business, from, "I can only process text messages right now. Please type your message!");
+    }
     return;
   }
-
-  const userText = message.text.body;
   
   let cart = JSON.parse(session.cartData || "[]");
   let history = JSON.parse(session.conversationHistory || "[]");
