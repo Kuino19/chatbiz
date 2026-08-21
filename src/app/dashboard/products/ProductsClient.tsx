@@ -24,8 +24,8 @@ export default function ProductsClient({ initialProducts, businessId }: Products
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [addPending, startAddTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
+  const [addPending, setAddPending] = useState(false);
 
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg });
@@ -33,38 +33,56 @@ export default function ProductsClient({ initialProducts, businessId }: Products
   }
 
   // ── ADD PRODUCT ──
-  async function handleAdd(formData: FormData) {
-    startAddTransition(async () => {
+  async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    
+    setAddPending(true);
+    try {
       const result = await addProduct(formData, businessId);
       if (result.success && result.product) {
-        setProducts(prev => [result.product!, ...prev]);
+        setProducts(prev => [result.product!, ...prev.filter(p => p.id !== result.product!.id)]);
         showToast("success", `"${result.product!.name}" added to your catalog ✓`);
-        // Reset form
-        const form = document.getElementById("addProductForm") as HTMLFormElement;
-        form?.reset();
+        form.reset();
       } else {
         showToast("error", result.error || "Failed to add product");
       }
-    });
+    } catch (err: any) {
+      console.error("Add product client error:", err);
+      showToast("error", err.message || "Failed to add product");
+    } finally {
+      setAddPending(false);
+    }
   }
 
   // ── DELETE PRODUCT ──
   async function handleDelete(id: string, name: string) {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-    startTransition(async () => {
+    setIsPending(true);
+    try {
       const result = await deleteProduct(id);
       if (result.success) {
         setProducts(prev => prev.filter(p => p.id !== id));
         showToast("success", `"${name}" removed from catalog`);
       } else {
-        showToast("error", "Failed to delete product");
+        showToast("error", result.error || "Failed to delete product");
       }
-    });
+    } catch (err: any) {
+      showToast("error", err.message || "Failed to delete product");
+    } finally {
+      setIsPending(false);
+    }
   }
 
   // ── EDIT PRODUCT ──
-  async function handleUpdate(formData: FormData, product: Product) {
-    startTransition(async () => {
+  async function handleUpdate(e: React.FormEvent<HTMLFormElement>, product: Product) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+
+    setIsPending(true);
+    try {
       const result = await updateProduct(formData, product.id);
       if (result.success && result.product) {
         setProducts(prev => prev.map(p => p.id === product.id ? result.product! : p));
@@ -73,7 +91,11 @@ export default function ProductsClient({ initialProducts, businessId }: Products
       } else {
         showToast("error", result.error || "Failed to update product");
       }
-    });
+    } catch (err: any) {
+      showToast("error", err.message || "Failed to update product");
+    } finally {
+      setIsPending(false);
+    }
   }
 
   return (
@@ -89,7 +111,7 @@ export default function ProductsClient({ initialProducts, businessId }: Products
       {/* ── ADD PRODUCT FORM ── */}
       <div className={`card ${styles.addProductCard}`}>
         <h3>Add New Product</h3>
-        <form id="addProductForm" action={handleAdd} className={styles.form}>
+        <form id="addProductForm" onSubmit={handleAdd} className={styles.form}>
           <div className={styles.formGroup}>
             <label htmlFor="name">Product Name</label>
             <input id="name" name="name" type="text" required placeholder="e.g. Smart Watch Pro" />
@@ -148,7 +170,7 @@ export default function ProductsClient({ initialProducts, businessId }: Products
                     /* ── INLINE EDIT ROW ── */
                     <td colSpan={5} className={styles.editRow}>
                       <form
-                        action={(fd) => handleUpdate(fd, product)}
+                        onSubmit={(e) => handleUpdate(e, product)}
                         className={styles.editForm}
                       >
                         <div className={styles.editGrid}>
