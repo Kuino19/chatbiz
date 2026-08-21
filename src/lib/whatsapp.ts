@@ -178,25 +178,50 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
     return;
   }
   
-  let cart = JSON.parse(session.cartData || "[]");
-  let history = JSON.parse(session.conversationHistory || "[]");
+  let cart: any[] = [];
+  try {
+    cart = JSON.parse(session.cartData || "[]");
+  } catch {
+    cart = [];
+  }
 
-  history.push({ role: "user", content: userText });
+  let rawHistory: any[] = [];
+  try {
+    rawHistory = JSON.parse(session.conversationHistory || "[]");
+  } catch {
+    rawHistory = [];
+  }
+
+  // Sanitize history: only keep clean user & assistant text messages
+  let history: Array<{ role: string; content: string }> = (Array.isArray(rawHistory) ? rawHistory : [])
+    .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
+    .map((m: any) => ({ role: m.role, content: m.content }));
 
   const systemPrompt = buildSystemPrompt(business, business.products, cart);
-  const messages = [{ role: "system", content: systemPrompt }, ...history];
+  
+  // Working array of messages for the current turn
+  const turnMessages: any[] = [
+    { role: "system", content: systemPrompt },
+    ...history,
+    { role: "user", content: userText }
+  ];
 
   try {
-    let aiResponse = await callLLM({ messages, tools: AI_TOOLS });
+    let aiResponse = await callLLM({ messages: turnMessages, tools: AI_TOOLS });
 
-    // Handle Tool Calls Loop
-    while (aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {
-      // Add the AI's tool call to history so the LLM knows it called it
-      history.push(aiResponse);
-      messages.push(aiResponse);
+    let iterations = 0;
+    // Handle Tool Calls Loop (max 5 iterations to prevent runaway loops)
+    while (aiResponse.tool_calls && aiResponse.tool_calls.length > 0 && iterations < 5) {
+      iterations++;
+      turnMessages.push(aiResponse);
 
       for (const toolCall of aiResponse.tool_calls) {
-        const args = JSON.parse(toolCall.function.arguments || "{}");
+        let args: any = {};
+        try {
+          args = JSON.parse(toolCall.function.arguments || "{}");
+        } catch {
+          args = {};
+        }
         let toolResult = "";
 
         if (toolCall.function.name === "add_to_cart") {
@@ -208,11 +233,11 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
           } else {
             const existing = cart.find((i: any) => i.productId === product.id);
             if (existing) {
-              existing.quantity += args.quantity;
+              existing.quantity += (args.quantity || 1);
             } else {
-              cart.push({ productId: product.id, name: product.name, price: product.price, quantity: args.quantity });
+              cart.push({ productId: product.id, name: product.name, price: product.price, quantity: (args.quantity || 1) });
             }
-            toolResult = `Success: Added ${args.quantity}x ${product.name} to cart.`;
+            toolResult = `Success: Added ${args.quantity || 1}x ${product.name} to cart.`;
           }
         } 
         else if (toolCall.function.name === "remove_from_cart") {
@@ -299,30 +324,31 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
           }
         }
 
-        // Add tool response to messages array
-        const toolMessage = {
+        // Add tool response to turn messages
+        turnMessages.push({
           role: "tool",
           tool_call_id: toolCall.id,
           name: toolCall.function.name,
           content: toolResult
-        };
-        history.push(toolMessage);
-        messages.push(toolMessage);
+        });
       }
 
-      // Call LLM again to get the final textual response after tools executed
-      messages[0].content = buildSystemPrompt(business, business.products, cart);
-      aiResponse = await callLLM({ messages, tools: AI_TOOLS });
+      // Refresh system prompt with updated cart state
+      turnMessages[0].content = buildSystemPrompt(business, business.products, cart);
+      aiResponse = await callLLM({ messages: turnMessages, tools: AI_TOOLS });
     }
 
-    // Once we have a pure textual response from AI:
-    if (aiResponse.content) {
+    // Deliver textual response to customer
+    if (aiResponse?.content) {
       await sendWhatsAppMessage(business, from, aiResponse.content);
+      history.push({ role: "user", content: userText });
       history.push({ role: "assistant", content: aiResponse.content });
     }
 
-    // Compact history to prevent huge payload and manage LLM token budget
-    history = compactConversationHistory(history);
+    // Keep last 16 dialog turns (clean user/assistant pairs)
+    if (history.length > 16) {
+      history = history.slice(history.length - 16);
+    }
 
     // Save session state
     const currentSession = await db.customerSession.findUnique({ where: { id: session.id } });
