@@ -149,6 +149,52 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
     return;
   }
 
+  // Human Takeover / Handoff State
+  if (session.currentState === "HANDOFF") {
+    const trigger = userText.toLowerCase().trim();
+    if (trigger === "resume" || trigger === "start" || trigger === "reset" || trigger === "bot") {
+      await db.customerSession.update({
+        where: { id: session.id },
+        data: { currentState: "ACTIVE", conversationHistory: "[]" }
+      });
+      await sendWhatsAppMessage(business, from, "👋 Welcome back! I'm your AI sales assistant. How can I help you today?");
+      return;
+    }
+    // While in HANDOFF, do not auto-reply so the human merchant can chat freely from their phone!
+    console.log(`[HANDOFF ACTIVE] Customer ${from} is chatting with a human. Skipping AI auto-reply.`);
+    return;
+  }
+
+  // Explicit Human Representative Keyword Triggers
+  const humanKeywords = [
+    "talk to a human", "speak to a human", "talk to human", "speak with a human",
+    "real person", "human agent", "talk to agent", "speak to agent",
+    "customer care", "customer service", "live agent", "speak to manager"
+  ];
+  const isHumanRequest = humanKeywords.some((k) => userText.toLowerCase().includes(k));
+
+  if (isHumanRequest) {
+    await db.customerSession.update({
+      where: { id: session.id },
+      data: { currentState: "HANDOFF" }
+    });
+
+    await sendWhatsAppMessage(
+      business,
+      from,
+      `🙋 I have notified a live representative from *${business.name}*! A team member will reply to you directly shortly.\n\n_(Type *resume* anytime if you'd like to switch back to the AI assistant)_`
+    );
+
+    if (business.whatsappNumber) {
+      await sendWhatsAppMessage(
+        business,
+        business.whatsappNumber,
+        `🚨 *Human Support Request*\n\nCustomer *+${from.replace('+', '')}* has requested human support.\n\n*Customer Message:* "${userText}"\n\n_The AI bot has been paused for this conversation. You can reply directly to the customer._`
+      ).catch((e) => console.error("Failed to alert store owner:", e));
+    }
+    return;
+  }
+
   // If no textual content could be extracted, provide friendly contextual guidance
   if (!userText.trim()) {
     if (messageType === "audio" || messageType === "voice") {
@@ -309,6 +355,28 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
               toolResult = `Error: Failed to generate checkout. ${e.message}`;
             }
           }
+        }
+        else if (toolCall.function.name === "request_human_agent") {
+          await db.customerSession.update({
+            where: { id: session.id },
+            data: { currentState: "HANDOFF" }
+          });
+
+          await sendWhatsAppMessage(
+            business,
+            from,
+            `🙋 I have notified a live representative from *${business.name}*! A team member will take over and reply to you directly shortly.\n\n_(You can type *resume* anytime to chat with the AI assistant again.)_`
+          );
+
+          if (business.whatsappNumber) {
+            await sendWhatsAppMessage(
+              business,
+              business.whatsappNumber,
+              `🚨 *Human Support Request*\n\nCustomer *+${from.replace('+', '')}* requested a human representative.\n\n*Reason:* ${args.reason || "Customer requested human agent"}\n\n_The AI bot has been paused for this conversation. You can reply directly to the customer._`
+            ).catch((e) => console.error("Failed to alert store owner:", e));
+          }
+
+          toolResult = "Success: Human representative notified. Chat transferred and bot paused.";
         }
 
         // Add tool response to turn messages
