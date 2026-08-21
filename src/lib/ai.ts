@@ -5,16 +5,16 @@ export async function callLLM({
   messages: Array<{ role: string; content?: string; tool_calls?: any[]; tool_call_id?: string; name?: string }>;
   tools?: any[];
 }): Promise<any> {
-  const hasGroq = !!process.env.GROQ_API_KEY;
-  const hasGemini = !!process.env.GEMINI_API_KEY;
+  const groqKey = process.env.GROQ_API_KEY?.trim();
+  const geminiKey = process.env.GEMINI_API_KEY?.trim();
 
   // 1. Try Groq first if key exists
-  if (hasGroq && process.env.LLM_PROVIDER !== "gemini") {
+  if (groqKey && process.env.LLM_PROVIDER !== "gemini") {
     try {
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+          Authorization: `Bearer ${groqKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -25,25 +25,26 @@ export async function callLLM({
         }),
       });
 
+      const responseText = await response.text();
       if (response.ok) {
-        const data = await response.json();
+        const data = JSON.parse(responseText);
         if (data.choices?.[0]?.message) {
           return data.choices[0].message;
         }
       }
-      console.warn("Groq request was not ok, checking fallback:", await response.text());
+      console.error("[Groq API Error]", response.status, responseText);
     } catch (err) {
-      console.error("Groq invocation error:", err);
+      console.error("[Groq invocation exception]", err);
     }
   }
 
-  // 2. Try Gemini fallback (or primary if LLM_PROVIDER is gemini or Groq failed)
-  if (hasGemini) {
+  // 2. Try Gemini fallback (or primary if LLM_PROVIDER is gemini)
+  if (geminiKey) {
     try {
       const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.GEMINI_API_KEY}`,
+          Authorization: `Bearer ${geminiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -54,19 +55,20 @@ export async function callLLM({
         }),
       });
 
+      const responseText = await response.text();
       if (response.ok) {
-        const data = await response.json();
+        const data = JSON.parse(responseText);
         if (data.choices?.[0]?.message) {
           return data.choices[0].message;
         }
       }
-      console.warn("Gemini request was not ok:", await response.text());
+      console.error("[Gemini API Error]", response.status, responseText);
     } catch (err) {
-      console.error("Gemini invocation error:", err);
+      console.error("[Gemini invocation exception]", err);
     }
   }
 
-  throw new Error("No available LLM provider succeeded. Please check GROQ_API_KEY or GEMINI_API_KEY.");
+  throw new Error("No available LLM provider succeeded.");
 }
 
 export const AI_TOOLS = [
@@ -106,8 +108,13 @@ export const AI_TOOLS = [
       description: "Finalize the order and generate a payment link for the customer.",
       parameters: {
         type: "object",
-        properties: {},
-        required: [],
+        properties: {
+          confirm: {
+            type: "boolean",
+            description: "Confirmation flag to initiate checkout",
+          },
+        },
+        required: ["confirm"],
       },
     },
   },
@@ -124,7 +131,7 @@ export const AI_TOOLS = [
         required: ["productId"],
       },
     },
-  }
+  },
 ];
 
 export function buildSystemPrompt(business: any, products: any[], cart: any[]) {

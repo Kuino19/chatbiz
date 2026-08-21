@@ -139,28 +139,13 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
     return;
   }
 
-  if (session.currentState === "AWAITING_PAYMENT") {
-    // If they are awaiting payment but typed 'cancel', let them cancel
-    if (userText.toLowerCase().trim() === "cancel") {
-      await db.customerSession.update({
-        where: { id: session.id },
-        data: { currentState: "ACTIVE", cartData: "[]", conversationHistory: "[]" }
-      });
-      await sendWhatsAppMessage(business, from, "Order cancelled. Let me know if you need anything else!");
-      return;
-    }
-    
-    // Check if there's a pending order for this customer to fetch the link
-    const order = await db.order.findFirst({
-      where: { businessId, customerPhone: from, status: "PENDING" },
-      orderBy: { createdAt: 'desc' }
+  // If user explicitly cancels
+  if (userText.toLowerCase().trim() === "cancel") {
+    await db.customerSession.update({
+      where: { id: session.id },
+      data: { currentState: "ACTIVE", cartData: "[]", conversationHistory: "[]" }
     });
-    
-    if (order && order.paymentUrl) {
-      await sendWhatsAppMessage(business, from, `You have a pending order. Please complete your payment here:\n${order.paymentUrl}\n\nType 'cancel' to cancel this order.`);
-    } else {
-      await sendWhatsAppMessage(business, from, "You have a pending order. Please complete your payment.");
-    }
+    await sendWhatsAppMessage(business, from, "Active session reset. How can I help you today?");
     return;
   }
 
