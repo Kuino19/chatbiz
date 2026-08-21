@@ -186,151 +186,169 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
   const systemPrompt = buildSystemPrompt(business, business.products, cart);
   const messages = [{ role: "system", content: systemPrompt }, ...history];
 
-  let aiResponse = await callLLM({ messages, tools: AI_TOOLS });
+  try {
+    let aiResponse = await callLLM({ messages, tools: AI_TOOLS });
 
-  // Handle Tool Calls Loop
-  while (aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {
-    // Add the AI's tool call to history so the LLM knows it called it
-    history.push(aiResponse);
-    messages.push(aiResponse);
+    // Handle Tool Calls Loop
+    while (aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {
+      // Add the AI's tool call to history so the LLM knows it called it
+      history.push(aiResponse);
+      messages.push(aiResponse);
 
-    for (const toolCall of aiResponse.tool_calls) {
-      const args = JSON.parse(toolCall.function.arguments || "{}");
-      let toolResult = "";
+      for (const toolCall of aiResponse.tool_calls) {
+        const args = JSON.parse(toolCall.function.arguments || "{}");
+        let toolResult = "";
 
-      if (toolCall.function.name === "add_to_cart") {
-        const product = business.products.find((p: any) => p.id === args.productId);
-        if (!product) {
-          toolResult = `Error: Product with ID ${args.productId} not found.`;
-        } else if (product.stock < args.quantity) {
-          toolResult = `Error: Only ${product.stock} items available in stock.`;
-        } else {
-          const existing = cart.find((i: any) => i.productId === product.id);
-          if (existing) {
-            existing.quantity += args.quantity;
+        if (toolCall.function.name === "add_to_cart") {
+          const product = business.products.find((p: any) => p.id === args.productId);
+          if (!product) {
+            toolResult = `Error: Product with ID ${args.productId} not found.`;
+          } else if (product.stock < args.quantity) {
+            toolResult = `Error: Only ${product.stock} items available in stock.`;
           } else {
-            cart.push({ productId: product.id, name: product.name, price: product.price, quantity: args.quantity });
+            const existing = cart.find((i: any) => i.productId === product.id);
+            if (existing) {
+              existing.quantity += args.quantity;
+            } else {
+              cart.push({ productId: product.id, name: product.name, price: product.price, quantity: args.quantity });
+            }
+            toolResult = `Success: Added ${args.quantity}x ${product.name} to cart.`;
           }
-          toolResult = `Success: Added ${args.quantity}x ${product.name} to cart.`;
+        } 
+        else if (toolCall.function.name === "remove_from_cart") {
+          const index = cart.findIndex((i: any) => i.productId === args.productId);
+          if (index > -1) {
+            cart.splice(index, 1);
+            toolResult = `Success: Removed item from cart.`;
+          } else {
+            toolResult = `Error: Item not in cart.`;
+          }
         }
-      } 
-      else if (toolCall.function.name === "remove_from_cart") {
-        const index = cart.findIndex((i: any) => i.productId === args.productId);
-        if (index > -1) {
-          cart.splice(index, 1);
-          toolResult = `Success: Removed item from cart.`;
-        } else {
-          toolResult = `Error: Item not in cart.`;
+        else if (toolCall.function.name === "send_product_image") {
+          const product = business.products.find((p: any) => p.id === args.productId);
+          if (!product) {
+            toolResult = `Error: Product with ID ${args.productId} not found.`;
+          } else if (!product.imageUrl) {
+            toolResult = `Error: No image available for ${product.name}.`;
+          } else {
+            await sendWhatsAppImage(business, from, product.imageUrl, `Here is the ${product.name}!`);
+            toolResult = `Success: Sent image of ${product.name} to the user.`;
+          }
         }
-      }
-      else if (toolCall.function.name === "send_product_image") {
-        const product = business.products.find((p: any) => p.id === args.productId);
-        if (!product) {
-          toolResult = `Error: Product with ID ${args.productId} not found.`;
-        } else if (!product.imageUrl) {
-          toolResult = `Error: No image available for ${product.name}.`;
-        } else {
-          await sendWhatsAppImage(business, from, product.imageUrl, `Here is the ${product.name}!`);
-          toolResult = `Success: Sent image of ${product.name} to the user.`;
-        }
-      }
-      else if (toolCall.function.name === "checkout") {
-        if (cart.length === 0) {
-          toolResult = "Error: Cart is empty. Tell the user to add items first.";
-        } else {
-          // Calculate total
-          const totalAmount = cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-          const totalKobo = Math.round(totalAmount * 100);
+        else if (toolCall.function.name === "checkout") {
+          if (cart.length === 0) {
+            toolResult = "Error: Cart is empty. Tell the user to add items first.";
+          } else {
+            try {
+              let totalAmount = 0;
+              const orderItems = [];
 
-          try {
-            // Create Order
-            const order = await db.order.create({
-              data: {
-                businessId,
-                customerPhone: from,
-                totalAmount,
-                items: {
-                  create: cart.map((item: any) => ({
-                    productId: item.productId,
-                    quantity: item.quantity,
-                    priceAtTime: item.price
-                  }))
+              for (const item of cart) {
+                const product = business.products.find((p: any) => p.id === item.productId);
+                if (!product || product.stock < item.quantity) {
+                  throw new Error(`Insufficient stock for ${item.name}`);
                 }
+                totalAmount += product.price * item.quantity;
+                orderItems.push({
+                  productId: product.id,
+                  quantity: item.quantity,
+                  priceAtTime: product.price,
+                });
               }
-            });
 
-            // Initialize Paystack transaction
-            // Generate a dummy email if none is known, as Paystack requires an email.
-            const customerEmail = `${from.replace("+", "")}@chatbiz.local`;
-            
-            const paystackData = await initializeTransaction({
-              email: customerEmail,
-              amount: totalKobo,
-              reference: `ORDER-${order.id}`,
-              metadata: { orderId: order.id, customerPhone: from, businessId },
-              subaccount: business.paystackSubaccountCode || null,
-            });
+              // Initialize transaction with Paystack using merchant subaccount
+              const paystackRes = await initializeTransaction({
+                email: `${from.replace("+", "")}@chatbiz.customer`,
+                amount: Math.round(totalAmount * 100), // in kobo
+                subaccount: business.paystackSubaccountCode || undefined,
+                metadata: {
+                  businessId: business.id,
+                  customerPhone: from,
+                },
+              });
 
-            await db.order.update({
-              where: { id: order.id },
-              data: { 
-                paystackReference: paystackData.reference,
-                paymentUrl: paystackData.authorization_url,
-                customerEmail
-              }
-            });
+              // Create pending order
+              const order = await db.order.create({
+                data: {
+                  businessId: business.id,
+                  customerPhone: from,
+                  totalAmount,
+                  paystackReference: paystackRes.reference,
+                  paymentUrl: paystackRes.authorization_url,
+                  status: "PENDING",
+                  items: {
+                    create: orderItems,
+                  },
+                },
+              });
 
-            // Set session to awaiting payment
-            await db.customerSession.update({
-              where: { id: session.id },
-              data: { currentState: "AWAITING_PAYMENT", cartData: "[]" }
-            });
+              // Set current state to AWAITING_PAYMENT
+              await db.customerSession.update({
+                where: { id: session.id },
+                data: { currentState: "AWAITING_PAYMENT" },
+              });
 
-            toolResult = `Success: Checkout generated. Send this Paystack payment link to the user: ${paystackData.authorization_url}`;
-            // clear the local cart variable so next prompt reflects it
-            cart = [];
-          } catch (e: any) {
-            console.error("Checkout tool error:", e);
-            toolResult = `Error: Failed to generate checkout. ${e.message}`;
+              toolResult = `Success: Order created with ID ${order.id}. Payment URL: ${paystackRes.authorization_url}. Inform the user to complete payment at this link.`;
+              
+              // clear the local cart variable so next prompt reflects it
+              cart = [];
+            } catch (e: any) {
+              console.error("Checkout tool error:", e);
+              toolResult = `Error: Failed to generate checkout. ${e.message}`;
+            }
           }
         }
+
+        // Add tool response to messages array
+        const toolMessage = {
+          role: "tool",
+          tool_call_id: toolCall.id,
+          name: toolCall.function.name,
+          content: toolResult
+        };
+        history.push(toolMessage);
+        messages.push(toolMessage);
       }
 
-      // Add tool response to messages array
-      const toolMessage = {
-        role: "tool",
-        tool_call_id: toolCall.id,
-        name: toolCall.function.name,
-        content: toolResult
-      };
-      history.push(toolMessage);
-      messages.push(toolMessage);
+      // Call LLM again to get the final textual response after tools executed
+      messages[0].content = buildSystemPrompt(business, business.products, cart);
+      aiResponse = await callLLM({ messages, tools: AI_TOOLS });
     }
 
-    // Call LLM again to get the final textual response after tools executed
-    // We update the system prompt in case cart changed
-    messages[0].content = buildSystemPrompt(business, business.products, cart);
-    aiResponse = await callLLM({ messages, tools: AI_TOOLS });
-  }
-
-  // Once we have a pure textual response from AI:
-  if (aiResponse.content) {
-    await sendWhatsAppMessage(business, from, aiResponse.content);
-    history.push({ role: "assistant", content: aiResponse.content });
-  }
-
-  // Compact history to prevent huge payload and manage LLM token budget
-  history = compactConversationHistory(history);
-
-  // Save session state (currentState might have changed to AWAITING_PAYMENT in the checkout tool)
-  const currentSession = await db.customerSession.findUnique({ where: { id: session.id } });
-  
-  await db.customerSession.update({
-    where: { id: session.id },
-    data: {
-      cartData: JSON.stringify(cart),
-      conversationHistory: JSON.stringify(history),
-      currentState: currentSession?.currentState // preserve AWAITING_PAYMENT if it was set
+    // Once we have a pure textual response from AI:
+    if (aiResponse.content) {
+      await sendWhatsAppMessage(business, from, aiResponse.content);
+      history.push({ role: "assistant", content: aiResponse.content });
     }
-  });
+
+    // Compact history to prevent huge payload and manage LLM token budget
+    history = compactConversationHistory(history);
+
+    // Save session state
+    const currentSession = await db.customerSession.findUnique({ where: { id: session.id } });
+    
+    await db.customerSession.update({
+      where: { id: session.id },
+      data: {
+        cartData: JSON.stringify(cart),
+        conversationHistory: JSON.stringify(history),
+        currentState: currentSession?.currentState
+      }
+    });
+  } catch (err: any) {
+    console.error("[processWhatsAppMessage Error]:", err);
+
+    // If AI fails (e.g. LLM API quota/key issue), provide an instant catalog fallback response
+    const productCatalog = (business.products || [])
+      .map((p: any) => `• *${p.name}* — ₦${p.price.toLocaleString()}`)
+      .join("\n");
+
+    const fallbackMsg = productCatalog
+      ? `👋 Welcome to *${business.name}*!\n\nHere is our current store catalog:\n${productCatalog}\n\nHow can I assist you today?`
+      : `👋 Welcome to *${business.name}*! How can I help you today?`;
+
+    await sendWhatsAppMessage(business, from, fallbackMsg).catch((e) =>
+      console.error("Failed to send fallback message:", e)
+    );
+  }
 }

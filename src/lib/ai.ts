@@ -5,56 +5,68 @@ export async function callLLM({
   messages: Array<{ role: string; content?: string; tool_calls?: any[]; tool_call_id?: string; name?: string }>;
   tools?: any[];
 }): Promise<any> {
-  const isGemini = process.env.LLM_PROVIDER === "gemini";
-  
-  let url = "https://api.groq.com/openai/v1/chat/completions";
-  let apiKey = process.env.GROQ_API_KEY;
-  let model = "llama-3.3-70b-versatile";
+  const hasGroq = !!process.env.GROQ_API_KEY;
+  const hasGemini = !!process.env.GEMINI_API_KEY;
 
-  if (isGemini) {
-    url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    apiKey = process.env.GEMINI_API_KEY;
-    model = "gemini-2.5-flash";
-  }
+  // 1. Try Groq first if key exists
+  if (hasGroq && process.env.LLM_PROVIDER !== "gemini") {
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages,
+          temperature: 0.3,
+          ...(tools && tools.length > 0 ? { tools, tool_choice: "auto" } : {}),
+        }),
+      });
 
-  if (!apiKey) {
-    throw new Error(`Missing API key for ${isGemini ? "Gemini" : "Groq"}`);
-  }
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.3,
-      ...(tools && tools.length > 0 ? { tools, tool_choice: "auto" } : {}),
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    // Simple fallback logic if Groq fails and we haven't tried Gemini
-    if (!isGemini && process.env.GEMINI_API_KEY) {
-      console.warn("Groq failed, falling back to Gemini...", errorText);
-      process.env.LLM_PROVIDER = "gemini"; // Temporary override for this request
-      try {
-        const fallbackResult = await callLLM({ messages, tools });
-        process.env.LLM_PROVIDER = "groq"; // Reset
-        return fallbackResult;
-      } catch (e) {
-        process.env.LLM_PROVIDER = "groq"; // Reset
-        throw e;
+      if (response.ok) {
+        const data = await response.json();
+        if (data.choices?.[0]?.message) {
+          return data.choices[0].message;
+        }
       }
+      console.warn("Groq request was not ok, checking fallback:", await response.text());
+    } catch (err) {
+      console.error("Groq invocation error:", err);
     }
-    throw new Error(`LLM API Error (${response.status}): ${errorText}`);
   }
 
-  const data = await response.json();
-  return data.choices[0].message;
+  // 2. Try Gemini fallback (or primary if LLM_PROVIDER is gemini or Groq failed)
+  if (hasGemini) {
+    try {
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.GEMINI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gemini-2.5-flash",
+          messages,
+          temperature: 0.3,
+          ...(tools && tools.length > 0 ? { tools, tool_choice: "auto" } : {}),
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.choices?.[0]?.message) {
+          return data.choices[0].message;
+        }
+      }
+      console.warn("Gemini request was not ok:", await response.text());
+    } catch (err) {
+      console.error("Gemini invocation error:", err);
+    }
+  }
+
+  throw new Error("No available LLM provider succeeded. Please check GROQ_API_KEY or GEMINI_API_KEY.");
 }
 
 export const AI_TOOLS = [
