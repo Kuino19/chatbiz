@@ -239,10 +239,12 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
           if (!product) {
             toolResult = `Error: Product with ID ${args.productId} not found.`;
           } else if (!product.imageUrl) {
-            toolResult = `Error: No image available for ${product.name}.`;
+            toolResult = `Notice: No photo is on file for ${product.name}. Describe the product to the user in text instead.`;
           } else {
-            await sendWhatsAppImage(business, from, product.imageUrl, `Here is the ${product.name}!`);
-            toolResult = `Success: Sent image of ${product.name} to the user.`;
+            console.log(`[send_product_image] Dispatching image for ${product.name}: ${product.imageUrl} to ${from}`);
+            const metaRes = await sendWhatsAppImage(business, from, product.imageUrl, `*${product.name}* — ₦${product.price.toLocaleString()}`);
+            console.log(`[send_product_image Response]:`, JSON.stringify(metaRes));
+            toolResult = `Success: Dispatched photo of ${product.name} to the customer.`;
           }
         }
         else if (toolCall.function.name === "checkout") {

@@ -5,13 +5,33 @@ import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { v2 as cloudinary } from "cloudinary";
 
+function initCloudinary() {
+  const url = process.env.CLOUDINARY_URL;
+  if (!url) return;
+
+  try {
+    const parsed = new URL(url);
+    const cloud_name = parsed.hostname;
+    const api_key = parsed.username;
+    const api_secret = parsed.password;
+
+    if (cloud_name && api_key && api_secret) {
+      cloudinary.config({
+        cloud_name,
+        api_key,
+        api_secret,
+        secure: true,
+      });
+    }
+  } catch (e) {
+    console.error("Failed to parse CLOUDINARY_URL:", e);
+  }
+}
+
 async function uploadImage(file: File): Promise<string | null> {
   if (!file || file.size === 0) return null;
 
-  if (!process.env.CLOUDINARY_URL && !process.env.CLOUDINARY_CLOUD_NAME) {
-    console.warn("Cloudinary not configured, skipping image upload.");
-    return null;
-  }
+  initCloudinary();
 
   try {
     const arrayBuffer = await file.arrayBuffer();
@@ -25,6 +45,7 @@ async function uploadImage(file: File): Promise<string | null> {
             console.error("Cloudinary Upload Error:", error);
             return resolve(null);
           }
+          console.log("[Cloudinary Upload Success]", result?.secure_url);
           resolve(result?.secure_url || null);
         }
       ).end(buffer);
