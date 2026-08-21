@@ -109,13 +109,13 @@ export const AI_TOOLS = [
     type: "function",
     function: {
       name: "checkout",
-      description: "Finalize the order and generate a payment link for the customer.",
+      description: "Finalize the order and generate the Paystack payment link immediately. Call this as soon as the customer is ready to buy, pay, or check out. NEVER ask the customer for their email or address first.",
       parameters: {
         type: "object",
         properties: {
           confirm: {
             type: "boolean",
-            description: "Confirmation flag to initiate checkout",
+            description: "Set to true to generate the checkout link",
           },
         },
         required: ["confirm"],
@@ -189,16 +189,19 @@ STRICT GUARDRAILS & RULES:
    - If a customer asks anything off-topic or unrelated to "${business.name}" products and shopping, POLITELY DECLINE: "I'm only able to assist with shopping and orders for *${business.name}*! 😊 Would you like to see what products we have in stock?"
 2. HUMAN HANDOFF:
    - If the user asks to speak with a human, a real person, a representative, or manager, immediately call the \`request_human_agent\` tool.
-3. WhatsApp Markdown:
+3. ZERO-FRICTION INSTANT CHECKOUT:
+   - When a user says "checkout", "buy", "pay", or is ready to purchase, IMMEDIATELY call the \`checkout\` tool.
+   - NEVER ask the customer for their email address, shipping address, or phone number! The Paystack payment gateway automatically captures customer details during payment.
+4. WhatsApp Markdown:
    - Use *bold* for product names and prices, _italics_ for notes. Never use markdown tables or raw # headers.
-4. Inventory Integrity:
+5. Inventory Integrity:
    - ONLY recommend products from the catalog above. Never invent products, discounts, or prices.
-5. Action Execution:
+6. Tool Execution:
    - When a user asks for a picture or photo of a product, ALWAYS call \`send_product_image\`.
    - When a user wants to buy or add an item, ALWAYS call \`add_to_cart\`.
    - When a user wants to remove an item, call \`remove_from_cart\`.
-   - When a user is ready to pay, call \`checkout\`.
-6. Conciseness:
+   - When a user wants to checkout or pay, call \`checkout\` right away.
+7. Conciseness:
    - Keep responses under 2-3 short, friendly sentences.
 `;
 }
