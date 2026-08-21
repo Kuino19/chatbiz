@@ -8,33 +8,37 @@ export async function callLLM({
   const groqKey = process.env.GROQ_API_KEY?.trim();
   const geminiKey = process.env.GEMINI_API_KEY?.trim();
 
-  // 1. Try Groq first if key exists
+  // 1. Try Groq (using active high-speed models openai/gpt-oss-120b or openai/gpt-oss-20b)
   if (groqKey && process.env.LLM_PROVIDER !== "gemini") {
-    try {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${groqKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages,
-          temperature: 0.3,
-          ...(tools && tools.length > 0 ? { tools, tool_choice: "auto" } : {}),
-        }),
-      });
+    const groqModels = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
 
-      const responseText = await response.text();
-      if (response.ok) {
-        const data = JSON.parse(responseText);
-        if (data.choices?.[0]?.message) {
-          return data.choices[0].message;
+    for (const model of groqModels) {
+      try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${groqKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: 0.3,
+            ...(tools && tools.length > 0 ? { tools, tool_choice: "auto" } : {}),
+          }),
+        });
+
+        const responseText = await response.text();
+        if (response.ok) {
+          const data = JSON.parse(responseText);
+          if (data.choices?.[0]?.message) {
+            return data.choices[0].message;
+          }
         }
+        console.error(`[Groq ${model} Error]`, response.status, responseText);
+      } catch (err) {
+        console.error(`[Groq ${model} exception]`, err);
       }
-      console.error("[Groq API Error]", response.status, responseText);
-    } catch (err) {
-      console.error("[Groq invocation exception]", err);
     }
   }
 
