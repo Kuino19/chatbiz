@@ -512,7 +512,7 @@ ${cleanText.slice(0, 7000)}`;
 
     let count = 0;
     for (const item of extractedProducts) {
-      if (!item.name) continue;
+      if (!item.name || !item.name.trim()) continue;
 
       let permanentImageUrl: string | null = null;
       if (item.imageUrl && item.imageUrl.startsWith("http")) {
@@ -529,14 +529,18 @@ ${cleanText.slice(0, 7000)}`;
         }
       }
 
+      // Safe default: 0 stock (unconfirmed). The vendor must review and enter physical inventory
+      // before the AI bot will offer it for sale, preventing overselling.
+      const safePrice = typeof item.price === "number" && !isNaN(item.price) && item.price > 0 ? item.price : 0;
+
       await db.product.create({
         data: {
           businessId,
-          name: item.name.slice(0, 100),
-          price: typeof item.price === "number" ? item.price : 0,
-          stock: 10, // Staging default stock for vendor review
+          name: item.name.trim().slice(0, 100),
+          price: safePrice,
+          stock: 0, 
           lowStockThreshold: 5,
-          description: item.description || null,
+          description: item.description ? item.description.trim() : null,
           imageUrl: permanentImageUrl,
         },
       });
@@ -549,11 +553,14 @@ ${cleanText.slice(0, 7000)}`;
     return {
       success: true,
       count,
-      message: `AI extracted ${count} product(s) from your link! Please review prices and update your stock counts.`,
+      message: `Extracted ${count} product(s) in staging (Stock set to 0). Please review prices and enter your in-stock quantities before publishing!`,
     };
   } catch (err: any) {
     console.error("Import From Link Exception:", err);
-    return { success: false, error: err.message || "Failed to process catalog link." };
+    return { 
+      success: false, 
+      error: "We could not read products from that link. Please check that the URL is public, or upload your products via CSV." 
+    };
   }
 }
 

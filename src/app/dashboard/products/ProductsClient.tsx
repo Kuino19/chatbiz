@@ -219,30 +219,7 @@ export default function ProductsClient({ initialProducts, businessId }: Products
           }}
         >
           <Sparkles size={16} />
-          AI Import from Store Link
-        </button>
-
-        <button
-          type="button"
-          onClick={handleSyncWhatsApp}
-          disabled={syncPending}
-          className="btn"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            background: "#25D366",
-            color: "#ffffff",
-            fontWeight: 600,
-            border: "none",
-            borderRadius: "8px",
-            padding: "10px 18px",
-            cursor: syncPending ? "not-allowed" : "pointer",
-            boxShadow: "0 2px 6px rgba(37, 211, 102, 0.25)"
-          }}
-        >
-          <RefreshCw size={16} className={syncPending ? "spin" : ""} />
-          {syncPending ? "Importing from Meta..." : "Import Meta Catalog"}
+          ✨ AI Import from Store Link
         </button>
 
         <input
@@ -275,26 +252,24 @@ export default function ProductsClient({ initialProducts, businessId }: Products
           {csvPending ? "Importing CSV..." : "Bulk CSV Import"}
         </button>
 
-        <button
-          type="button"
-          onClick={downloadSampleCsv}
-          className="btn"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-            background: "transparent",
-            color: "#64748b",
-            fontSize: "0.85rem",
-            fontWeight: 500,
-            border: "1px solid #cbd5e1",
-            borderRadius: "8px",
-            padding: "9px 14px",
-            cursor: "pointer"
-          }}
-        >
-          Download Sample CSV
-        </button>
+        <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
+          or{" "}
+          <button
+            type="button"
+            onClick={downloadSampleCsv}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              color: "#4f46e5",
+              textDecoration: "underline",
+              fontWeight: 500,
+              cursor: "pointer"
+            }}
+          >
+            download sample CSV template
+          </button>
+        </span>
       </div>
 
       {/* ── AI LINK IMPORT MODAL ── */}
