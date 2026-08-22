@@ -144,6 +144,23 @@ export default function ProductsClient({ initialProducts, businessId }: Products
     }
   }
 
+  // ── DOWNLOAD SAMPLE CSV ──
+  function downloadSampleCsv() {
+    const csvContent = "data:text/csv;charset=utf-8," + 
+      "Name,Price,Stock,Description,Image_URL\n" +
+      "Sneakers Pro,15000,50,High quality running shoes,https://images.unsplash.com/photo-1542291026-7eec264c27ff\n" +
+      "Leather Handbag,25000,20,Classic brown handbag,https://images.unsplash.com/photo-1584917865442-de89df76afd3\n" +
+      "Smart Watch,35000,15,Bluetooth health tracking watch,\n";
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "chatbiz_products_sample.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   return (
     <>
       {/* ── TOAST ── */}
@@ -155,7 +172,7 @@ export default function ProductsClient({ initialProducts, businessId }: Products
       )}
 
       {/* ── IMPORT & QUICK ACTIONS TOOLBAR ── */}
-      <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap", alignItems: "center" }}>
         <button
           type="button"
           onClick={handleSyncWhatsApp}
@@ -207,6 +224,27 @@ export default function ProductsClient({ initialProducts, businessId }: Products
         >
           <FileSpreadsheet size={16} />
           {csvPending ? "Importing CSV..." : "Bulk CSV Import"}
+        </button>
+
+        <button
+          type="button"
+          onClick={downloadSampleCsv}
+          className="btn"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            background: "transparent",
+            color: "#64748b",
+            fontSize: "0.85rem",
+            fontWeight: 500,
+            border: "1px solid #cbd5e1",
+            borderRadius: "8px",
+            padding: "9px 14px",
+            cursor: "pointer"
+          }}
+        >
+          Download Sample CSV
         </button>
       </div>
 
