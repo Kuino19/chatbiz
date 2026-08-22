@@ -3,7 +3,8 @@
 import { useState, useRef } from "react";
 import { Plus, Trash2, Pencil, X, Check, Package, AlertCircle, CheckCircle2, RefreshCw, UploadCloud, FileSpreadsheet } from "lucide-react";
 import styles from "./page.module.css";
-import { addProduct, deleteProduct, updateProduct, syncWhatsAppCatalog, importProductsCsv } from "./actions";
+import { addProduct, deleteProduct, updateProduct, syncWhatsAppCatalog, importProductsCsv, importFromCatalogLink } from "./actions";
+import { Link2, Sparkles } from "lucide-react";
 
 interface Product {
   id: string;
@@ -28,6 +29,9 @@ export default function ProductsClient({ initialProducts, businessId }: Products
   const [addPending, setAddPending] = useState(false);
   const [syncPending, setSyncPending] = useState(false);
   const [csvPending, setCsvPending] = useState(false);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkPending, setLinkPending] = useState(false);
   const csvInputRef = useRef<HTMLInputElement | null>(null);
 
   function showToast(type: "success" | "error", msg: string) {
@@ -74,6 +78,29 @@ export default function ProductsClient({ initialProducts, businessId }: Products
       showToast("error", err.message || "WhatsApp sync failed");
     } finally {
       setSyncPending(false);
+    }
+  }
+
+  // ── AI STORE LINK IMPORT ──
+  async function handleLinkImport(e: React.FormEvent) {
+    e.preventDefault();
+    if (!linkUrl.trim()) return;
+
+    setLinkPending(true);
+    try {
+      const res = await importFromCatalogLink(linkUrl, businessId);
+      if (res.success) {
+        showToast("success", res.message || `Extracted products from your link!`);
+        setLinkModalOpen(false);
+        setLinkUrl("");
+        window.location.reload();
+      } else {
+        showToast("error", res.error || "Failed to extract products from link");
+      }
+    } catch (err: any) {
+      showToast("error", err.message || "Link import failed");
+    } finally {
+      setLinkPending(false);
     }
   }
 
@@ -175,6 +202,28 @@ export default function ProductsClient({ initialProducts, businessId }: Products
       <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap", alignItems: "center" }}>
         <button
           type="button"
+          onClick={() => setLinkModalOpen(true)}
+          className="btn"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+            color: "#ffffff",
+            fontWeight: 600,
+            border: "none",
+            borderRadius: "8px",
+            padding: "10px 18px",
+            cursor: "pointer",
+            boxShadow: "0 2px 6px rgba(99, 102, 241, 0.25)"
+          }}
+        >
+          <Sparkles size={16} />
+          AI Import from Store Link
+        </button>
+
+        <button
+          type="button"
           onClick={handleSyncWhatsApp}
           disabled={syncPending}
           className="btn"
@@ -193,7 +242,7 @@ export default function ProductsClient({ initialProducts, businessId }: Products
           }}
         >
           <RefreshCw size={16} className={syncPending ? "spin" : ""} />
-          {syncPending ? "Syncing from Meta..." : "Sync from WhatsApp Catalog"}
+          {syncPending ? "Importing from Meta..." : "Import Meta Catalog"}
         </button>
 
         <input
@@ -247,6 +296,106 @@ export default function ProductsClient({ initialProducts, businessId }: Products
           Download Sample CSV
         </button>
       </div>
+
+      {/* ── AI LINK IMPORT MODAL ── */}
+      {linkModalOpen && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(15, 23, 42, 0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "16px",
+            padding: "24px",
+            maxWidth: "500px",
+            width: "100%",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Sparkles size={20} color="#4f46e5" />
+                <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700 }}>AI Store Link Importer</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLinkModalOpen(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: "0.88rem", color: "#64748b", margin: "0 0 16px 0", lineHeight: 1.5 }}>
+              Paste your public WhatsApp catalog link (e.g. <code>wa.me/c/23480...</code>) or online store URL. Our AI will extract product photos, names, and prices into your review table.
+            </p>
+
+            <form onSubmit={handleLinkImport}>
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                  Catalog or Store URL
+                </label>
+                <input
+                  type="url"
+                  required
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://wa.me/c/2348012345678 or https://mystore.com"
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    fontSize: "0.9rem"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  onClick={() => setLinkModalOpen(false)}
+                  style={{
+                    padding: "9px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    background: "#f8fafc",
+                    color: "#475569",
+                    fontWeight: 500,
+                    cursor: "pointer"
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={linkPending}
+                  style={{
+                    padding: "9px 18px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+                    color: "#ffffff",
+                    fontWeight: 600,
+                    cursor: linkPending ? "not-allowed" : "pointer"
+                  }}
+                >
+                  {linkPending ? "AI is Extracting Products..." : "Extract Products"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ── ADD PRODUCT FORM ── */}
       <div className={`card ${styles.addProductCard}`}>

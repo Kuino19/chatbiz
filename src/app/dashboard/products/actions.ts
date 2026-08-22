@@ -417,6 +417,146 @@ export async function importProductsCsv(formData: FormData, businessId: string) 
   }
 }
 
+import { callLLM } from "@/lib/ai";
+
+export async function importFromCatalogLink(targetUrl: string, businessId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "Not authenticated" };
+
+  const business = await db.business.findUnique({ where: { id: businessId } });
+  if (!business || business.userId !== session.user.id) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const trimmedUrl = (targetUrl || "").trim();
+  if (!trimmedUrl || (!trimmedUrl.startsWith("http://") && !trimmedUrl.startsWith("https://") && !trimmedUrl.startsWith("wa.me/"))) {
+    return { success: false, error: "Please enter a valid link (e.g., https://wa.me/c/... or your store URL)." };
+  }
+
+  const fullUrl = trimmedUrl.startsWith("wa.me/") ? `https://${trimmedUrl}` : trimmedUrl;
+
+  try {
+    const response = await fetch(fullUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      },
+      signal: AbortSignal.timeout(12000),
+    });
+
+    if (!response.ok) {
+      return { success: false, error: `Could not reach link (HTTP ${response.status}). Please check that the URL is public.` };
+    }
+
+    const html = await response.text();
+    // Strip scripts, styles, and excess HTML tags for clean AI extraction
+    const cleanText = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    // Extract any image URLs in HTML
+    const imgMatches = Array.from(html.matchAll(/(https?:\/\/[^\s"'<>]+\.(?:jpg|jpeg|png|webp|avif)[^\s"'<>]*)/gi)).map(m => m[1]);
+    const sampleImages = imgMatches.slice(0, 10).join("\n");
+
+    const prompt = `You are a product catalog extractor. Extract all products from this webpage content into a clean JSON object.
+JSON Schema:
+{
+  "products": [
+    {
+      "name": "Product Name",
+      "price": 15000,
+      "description": "Short description or null",
+      "imageUrl": "https://... or null"
+    }
+  ]
+}
+
+Rules:
+- price must be a positive number in Nigerian Naira (NGN), without commas or currency signs.
+- If no clear products are found, return { "products": [] }.
+- Output strictly valid JSON only.
+
+Available Image Links found on page:
+${sampleImages}
+
+Page Text:
+${cleanText.slice(0, 7000)}`;
+
+    const aiRes = await callLLM({
+      messages: [
+        { role: "system", content: "You extract structured product lists from webpage text into JSON format." },
+        { role: "user", content: prompt }
+      ]
+    });
+
+    let parsed: { products?: any[] } = { products: [] };
+    try {
+      const jsonMatch = aiRes.content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      }
+    } catch {
+      parsed = { products: [] };
+    }
+
+    const extractedProducts = parsed.products || [];
+    if (extractedProducts.length === 0) {
+      return {
+        success: false,
+        error: "Could not extract products automatically from this link. Try using our Bulk CSV Import or adding them directly.",
+      };
+    }
+
+    let count = 0;
+    for (const item of extractedProducts) {
+      if (!item.name) continue;
+
+      let permanentImageUrl: string | null = null;
+      if (item.imageUrl && item.imageUrl.startsWith("http")) {
+        initCloudinary();
+        try {
+          const up = await cloudinary.uploader.upload(item.imageUrl, {
+            folder: "chatbiz_products",
+            fetch_format: "auto",
+            quality: "auto",
+          });
+          permanentImageUrl = up?.secure_url || null;
+        } catch {
+          permanentImageUrl = item.imageUrl;
+        }
+      }
+
+      await db.product.create({
+        data: {
+          businessId,
+          name: item.name.slice(0, 100),
+          price: typeof item.price === "number" ? item.price : 0,
+          stock: 10, // Staging default stock for vendor review
+          lowStockThreshold: 5,
+          description: item.description || null,
+          imageUrl: permanentImageUrl,
+        },
+      });
+      count++;
+    }
+
+    revalidatePath("/dashboard/products");
+    revalidatePath("/dashboard");
+
+    return {
+      success: true,
+      count,
+      message: `AI extracted ${count} product(s) from your link! Please review prices and update your stock counts.`,
+    };
+  } catch (err: any) {
+    console.error("Import From Link Exception:", err);
+    return { success: false, error: err.message || "Failed to process catalog link." };
+  }
+}
+
 function parseCsvRow(row: string): string[] {
   const result: string[] = [];
   let current = "";
