@@ -419,16 +419,14 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
   } catch (err: any) {
     console.error("[processWhatsAppMessage Error]:", err);
 
-    // If AI fails (e.g. LLM API quota/key issue), provide an instant catalog fallback response
-    const productCatalog = (business.products || [])
-      .map((p: any) => `• *${p.name}* — ₦${p.price.toLocaleString()}`)
-      .join("\n");
+    // If AI fails unexpectedly, respond with context-aware guidance without losing state
+    let recoveryMsg = "Sorry for the brief delay! How can I help you today?";
+    if (cart && cart.length > 0) {
+      const itemsList = cart.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
+      recoveryMsg = `I still have *${itemsList}* in your cart! Ready to checkout? Type *checkout* to proceed. 😊`;
+    }
 
-    const fallbackMsg = productCatalog
-      ? `👋 Welcome to *${business.name}*!\n\nHere is our current store catalog:\n${productCatalog}\n\nHow can I assist you today?`
-      : `👋 Welcome to *${business.name}*! How can I help you today?`;
-
-    await sendWhatsAppMessage(business, from, fallbackMsg).catch((e) =>
+    await sendWhatsAppMessage(business, from, recoveryMsg).catch((e) =>
       console.error("Failed to send fallback message:", e)
     );
   }

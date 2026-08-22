@@ -8,9 +8,15 @@ export async function callLLM({
   const groqKey = process.env.GROQ_API_KEY?.trim();
   const geminiKey = process.env.GEMINI_API_KEY?.trim();
 
-  // 1. Try Groq (using active high-speed models openai/gpt-oss-120b or openai/gpt-oss-20b)
+  // 1. Try Groq (using active high-speed models)
   if (groqKey && process.env.LLM_PROVIDER !== "gemini") {
-    const groqModels = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
+    const groqModels = [
+      "openai/gpt-oss-120b",
+      "openai/gpt-oss-20b",
+      "qwen/qwen3.6-27b",
+      "groq/compound",
+      "groq/compound-mini"
+    ];
 
     for (const model of groqModels) {
       try {
