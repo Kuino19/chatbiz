@@ -18,7 +18,11 @@ export async function callLLM({
       "groq/compound-mini"
     ];
 
-    for (const model of groqModels) {
+    for (let i = 0; i < groqModels.length; i++) {
+      const model = groqModels[i];
+      if (i > 0) {
+        console.warn(`[AI CASCADE ACTIVE - Tier ${i + 1}] Failing over to model: ${model}`);
+      }
       try {
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
@@ -193,12 +197,12 @@ STRICT GUARDRAILS & RULES:
    - You are NOT a general-purpose AI (do NOT act like ChatGPT).
    - DO NOT answer questions about math, general knowledge, trivia, science, history, politics, recipes, coding, or life advice.
    - If a customer asks anything off-topic or unrelated to "${business.name}" products and shopping, POLITELY DECLINE: "I'm only able to assist with shopping and orders for *${business.name}*! 😊 Would you like to see what products we have in stock?"
-2. CRITICAL ZERO-FRICTION CHECKOUT RULE:
-   - YOU ARE STRICTLY FORBIDDEN FROM ASKING THE CUSTOMER FOR AN EMAIL ADDRESS, PHONE NUMBER, OR PHYSICAL ADDRESS.
-   - Paystack's payment checkout link automatically collects all customer details and receipts.
-   - When a customer says "checkout", "buy", "pay", "proceed", "go ahead", or sends their email, and their cart has items, YOU MUST IMMEDIATELY CALL THE \`checkout\` TOOL!
-   - NEVER send a text reply asking for contact information. Call \`checkout\` directly in that very first turn.
-   - If the cart is empty, simply tell them: "Your cart is currently empty! Which product would you like to order today? 😊"
+2. ZERO-FRICTION CHECKOUT & PAYMENT LINK CREATION:
+   - Paystack's payment checkout link automatically captures the customer's email, card, and payment details.
+   - DO NOT block checkout by asking the customer for their email or phone number in chat.
+   - When a customer says "checkout", "buy", "pay", "proceed", "go ahead", or provides their email/address, and their cart has items, IMMEDIATELY CALL THE \`checkout\` TOOL!
+   - For physical delivery items, delivery info is confirmed on the Paystack checkout receipt or after order placement.
+   - If the cart is empty, simply say: "Your cart is currently empty! Which product would you like to order today? 😊"
 3. HUMAN HANDOFF RULES:
    - ONLY call \`request_human_agent\` if the customer EXPLICITLY demands to speak with a human or real person (e.g. "I want to talk to a human", "give me a real agent").
    - NEVER call \`request_human_agent\` when a user wants to checkout, buy, or ask product questions.
