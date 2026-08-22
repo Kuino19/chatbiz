@@ -291,15 +291,36 @@ export async function syncWhatsAppCatalog(businessId: string) {
         price = parseFloat(cleaned) || 0;
       }
 
+      // Re-upload ephemeral Meta CDN image to permanent Cloudinary storage
+      let permanentImageUrl: string | null = null;
+      if (item.image_url && item.image_url.startsWith("http")) {
+        initCloudinary();
+        try {
+          const uploadRes = await cloudinary.uploader.upload(item.image_url, {
+            folder: "chatbiz_products",
+            fetch_format: "auto",
+            quality: "auto",
+          });
+          permanentImageUrl = uploadRes?.secure_url || null;
+        } catch (imgErr) {
+          console.warn("Could not re-upload Meta CDN image to Cloudinary, fallback to source URL:", imgErr);
+          permanentImageUrl = item.image_url;
+        }
+      }
+
+      // Meta catalog provides boolean status (in stock / out of stock), not numeric stock counts.
+      // Default to 10 for in-stock items with a reminder for the vendor to verify quantities.
+      const initialStock = item.availability === "in stock" ? 10 : 0;
+
       await db.product.create({
         data: {
           businessId,
           name: item.name,
           description: item.description || null,
           price,
-          stock: item.availability === "in stock" ? 50 : 10,
+          stock: initialStock,
           lowStockThreshold: 5,
-          imageUrl: item.image_url || null,
+          imageUrl: permanentImageUrl,
         },
       });
       importedCount++;
@@ -311,11 +332,11 @@ export async function syncWhatsAppCatalog(businessId: string) {
     return {
       success: true,
       count: importedCount,
-      message: `Successfully imported ${importedCount} product(s) from your WhatsApp Catalog!`,
+      message: `Imported ${importedCount} product(s) from Meta Catalog! Please review prices and update your stock counts.`,
     };
   } catch (err: any) {
     console.error("Sync WhatsApp Catalog Exception:", err);
-    return { success: false, error: err.message || "Failed to sync catalog from WhatsApp" };
+    return { success: false, error: err.message || "Failed to import catalog from WhatsApp" };
   }
 }
 
