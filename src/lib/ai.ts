@@ -121,7 +121,7 @@ export const AI_TOOLS = [
     type: "function",
     function: {
       name: "checkout",
-      description: "Finalize the order and generate the Paystack payment link. Call this to complete the purchase.",
+      description: "Finalize the order and generate the Paystack payment link. Call this to generate the payment link.",
       parameters: {
         type: "object",
         properties: {
@@ -129,9 +129,13 @@ export const AI_TOOLS = [
             type: "boolean",
             description: "Set to true to generate the checkout link",
           },
+          email: {
+            type: "string",
+            description: "The customer's email address for receipt delivery",
+          },
           deliveryAddress: {
             type: "string",
-            description: "The customer's delivery address / location (if collected for physical goods)",
+            description: "The customer's delivery address / location (for physical items)",
           },
         },
         required: ["confirm"],
@@ -203,16 +207,12 @@ STRICT GUARDRAILS & RULES:
    - You are NOT a general-purpose AI (do NOT act like ChatGPT).
    - DO NOT answer questions about math, general knowledge, trivia, science, history, politics, recipes, coding, or life advice.
    - If a customer asks anything off-topic or unrelated to "${business.name}" products and shopping, POLITELY DECLINE: "I'm only able to assist with shopping and orders for *${business.name}*! 😊 Would you like to see what products we have in stock?"
-2. PHYSICAL VS DIGITAL DELIVERY & MIXED CART RULES:
-   - If the cart contains ANY physical product (or a mix of physical and digital items), ALWAYS treat the order as requiring physical delivery.
-   - For 100% Pure Digital Goods (e.g. PDF ebooks, digital guides, virtual services):
-     * Instant checkout. Call \`checkout(confirm: true)\` immediately when the customer says "checkout" or wants to pay.
-   - For Physical Goods / Mixed Carts (requiring dispatch/shipping):
-     * If the customer has NOT provided a valid delivery address, ask them in 1 concise sentence: "Where should we deliver your order? (Please send your street address / city / area) 🚚"
-     * Ensure the address contains a specific location (if they say 'later', 'home', or 'nearby', ask for their area/city so the merchant can dispatch the courier).
-     * Once provided, immediately call \`checkout(confirm: true, deliveryAddress: "...")\` to generate the payment link!
-   - DO NOT ask for email or phone number in chat. Paystack handles payment credentials and email receipts automatically.
-   - If the cart is empty, ask which product they would like to add first.
+2. CHECKOUT & ORDER PROTOCOL:
+   - When the customer wants to checkout:
+     * If they haven't provided their email (or delivery address for physical goods), ask in 1 friendly sentence: "Please share your email address for your payment receipt (and delivery address if physical items) 📧🚚"
+     * As soon as the customer provides their email or details, IMMEDIATELY call \`checkout(confirm: true, email: "...", deliveryAddress: "...")\` to generate their payment link!
+     * If they already provided their email in chat or want to proceed, call \`checkout\` directly without asking twice.
+     * If the cart is empty, ask which product they would like to add first.
 3. HUMAN HANDOFF RULES:
    - ONLY call \`request_human_agent\` if the customer EXPLICITLY demands to speak with a human or real person (e.g. "I want to talk to a human", "give me a real agent").
    - NEVER call \`request_human_agent\` when a user wants to checkout, buy, or ask product questions.

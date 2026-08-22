@@ -237,8 +237,10 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
     { role: "user", content: userText }
   ];
 
-  // If the customer's intent is explicitly to checkout and cart has items, enforce checkout tool execution
-  const isCheckoutIntent = /\b(checkout|proceed to checkout|proceed|go ahead with checkout|pay now|make payment|complete order|ready to checkout|i would like to proceed to checkout|i want to pay|pay)\b/i.test(userText.trim());
+  // If the customer's intent is explicitly to checkout or they provided an email/address, enforce checkout tool execution
+  const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
+  const hasEmail = emailRegex.test(userText);
+  const isCheckoutIntent = hasEmail || /\b(checkout|proceed to checkout|proceed|go ahead with checkout|pay now|make payment|complete order|ready to checkout|i would like to proceed to checkout|i want to pay|pay)\b/i.test(userText.trim());
   const initialToolChoice = (isCheckoutIntent && cart.length > 0)
     ? { type: "function", function: { name: "checkout" } }
     : "auto";
@@ -322,9 +324,10 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
 
               const deliveryAddress = (args.deliveryAddress || session.deliveryAddress || "").trim() || null;
 
-              // Extract customer email if provided in chat or fallback to valid TLD synthetic email
+              // Extract customer email from tool args, user message, or history (fallback to valid TLD)
               const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
-              const foundEmail = userText.match(emailRegex)?.[1] || 
+              const foundEmail = args.email || 
+                                 userText.match(emailRegex)?.[1] || 
                                  history.map(m => m.content).join(" ").match(emailRegex)?.[1] ||
                                  null;
 
