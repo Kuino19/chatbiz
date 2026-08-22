@@ -29,29 +29,26 @@ function initCloudinary() {
 }
 
 async function uploadImage(file: File): Promise<string | null> {
-  if (!file || file.size === 0) return null;
+  if (!file || typeof file === "string" || file.size === 0) return null;
 
   initCloudinary();
 
   try {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const mimeType = file.type || "image/jpeg";
+    const dataUri = `data:${mimeType};base64,${buffer.toString("base64")}`;
 
-    return await new Promise((resolve) => {
-      cloudinary.uploader.upload_stream(
-        { folder: "chatbiz_products", fetch_format: "auto", quality: "auto" },
-        (error, result) => {
-          if (error) {
-            console.error("Cloudinary Upload Error:", error);
-            return resolve(null);
-          }
-          console.log("[Cloudinary Upload Success]", result?.secure_url);
-          resolve(result?.secure_url || null);
-        }
-      ).end(buffer);
+    const result = await cloudinary.uploader.upload(dataUri, {
+      folder: "chatbiz_products",
+      fetch_format: "auto",
+      quality: "auto",
     });
+
+    console.log("[Cloudinary Upload Success]", result?.secure_url);
+    return result?.secure_url || null;
   } catch (err) {
-    console.error("Image upload exception:", err);
+    console.error("Cloudinary Image upload exception:", err);
     return null;
   }
 }
