@@ -295,7 +295,7 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
         }
         else if (toolCall.function.name === "checkout") {
           if (cart.length === 0) {
-            toolResult = "Error: Cart is empty. Tell the user to add items first.";
+            toolResult = "Notice: The customer's cart is currently empty. Ask the customer which item from the store they would like to add first.";
           } else {
             try {
               let totalAmount = 0;
