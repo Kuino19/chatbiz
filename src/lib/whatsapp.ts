@@ -237,8 +237,14 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
     { role: "user", content: userText }
   ];
 
+  // If the customer's intent is explicitly to checkout and cart has items, enforce checkout tool execution
+  const isCheckoutIntent = /\b(checkout|proceed to checkout|proceed|go ahead with checkout|pay now|make payment|complete order|ready to checkout|i would like to proceed to checkout|i want to pay|pay)\b/i.test(userText.trim());
+  const initialToolChoice = (isCheckoutIntent && cart.length > 0)
+    ? { type: "function", function: { name: "checkout" } }
+    : "auto";
+
   try {
-    let aiResponse = await callLLM({ messages: turnMessages, tools: AI_TOOLS });
+    let aiResponse = await callLLM({ messages: turnMessages, tools: AI_TOOLS, tool_choice: initialToolChoice });
 
     let iterations = 0;
     // Handle Tool Calls Loop (max 5 iterations to prevent runaway loops)

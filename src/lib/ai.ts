@@ -1,9 +1,11 @@
 export async function callLLM({
   messages,
   tools,
+  tool_choice = "auto",
 }: {
   messages: Array<{ role: string; content?: string; tool_calls?: any[]; tool_call_id?: string; name?: string }>;
   tools?: any[];
+  tool_choice?: any;
 }): Promise<any> {
   const groqKey = process.env.GROQ_API_KEY?.trim();
   const geminiKey = process.env.GEMINI_API_KEY?.trim();
@@ -34,7 +36,7 @@ export async function callLLM({
             model,
             messages,
             temperature: 0.3,
-            ...(tools && tools.length > 0 ? { tools, tool_choice: "auto" } : {}),
+            ...(tools && tools.length > 0 ? { tools, tool_choice } : {}),
           }),
         });
 
@@ -65,7 +67,7 @@ export async function callLLM({
           model: "gemini-2.5-flash",
           messages,
           temperature: 0.3,
-          ...(tools && tools.length > 0 ? { tools, tool_choice: "auto" } : {}),
+          ...(tools && tools.length > 0 ? { tools, tool_choice } : {}),
         }),
       });
 
