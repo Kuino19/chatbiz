@@ -84,8 +84,12 @@ export async function addProduct(formData: FormData, businessId: string) {
     const validThreshold = isNaN(threshold) || threshold < 0 ? 5 : threshold;
 
     const description = ((formData.get("description") as string) || "").trim() || null;
-    const imageFile = formData.get("image") as File | null;
-    const imageUrl = imageFile && imageFile.size > 0 ? await uploadImage(imageFile) : null;
+    
+    const imageRaw = formData.get("image");
+    let imageUrl: string | null = null;
+    if (imageRaw && typeof imageRaw !== "string" && (imageRaw as File).size > 0) {
+      imageUrl = await uploadImage(imageRaw as File);
+    }
 
     const product = await db.product.create({
       data: {
@@ -99,18 +103,15 @@ export async function addProduct(formData: FormData, businessId: string) {
       },
     });
 
-    revalidatePath("/dashboard/products");
-    revalidatePath("/dashboard");
-
     return {
       success: true,
       product: {
         id: product.id,
         name: product.name,
         description: product.description,
-        price: product.price,
-        stock: product.stock,
-        lowStockThreshold: product.lowStockThreshold,
+        price: Number(product.price) || 0,
+        stock: Number(product.stock) || 0,
+        lowStockThreshold: Number(product.lowStockThreshold) || 5,
         imageUrl: product.imageUrl,
       },
     };
@@ -131,8 +132,6 @@ export async function deleteProduct(id: string) {
 
   try {
     await db.product.delete({ where: { id } });
-    revalidatePath("/dashboard/products");
-    revalidatePath("/dashboard");
     return { success: true };
   } catch (e: any) {
     console.error("Delete Product Error:", e);
@@ -168,11 +167,11 @@ export async function updateProduct(formData: FormData, id: string) {
     const validThreshold = isNaN(threshold) || threshold < 0 ? 5 : threshold;
 
     const description = ((formData.get("description") as string) || "").trim() || null;
-    const imageFile = formData.get("image") as File | null;
     
+    const imageRaw = formData.get("image");
     let newImageUrl = undefined;
-    if (imageFile && imageFile.size > 0) {
-      const uploadedUrl = await uploadImage(imageFile);
+    if (imageRaw && typeof imageRaw !== "string" && (imageRaw as File).size > 0) {
+      const uploadedUrl = await uploadImage(imageRaw as File);
       if (uploadedUrl) newImageUrl = uploadedUrl;
     }
 
@@ -188,18 +187,15 @@ export async function updateProduct(formData: FormData, id: string) {
       },
     });
 
-    revalidatePath("/dashboard/products");
-    revalidatePath("/dashboard");
-
     return {
       success: true,
       product: {
         id: updated.id,
         name: updated.name,
         description: updated.description,
-        price: updated.price,
-        stock: updated.stock,
-        lowStockThreshold: updated.lowStockThreshold,
+        price: Number(updated.price) || 0,
+        stock: Number(updated.stock) || 0,
+        lowStockThreshold: Number(updated.lowStockThreshold) || 5,
         imageUrl: updated.imageUrl,
       },
     };
