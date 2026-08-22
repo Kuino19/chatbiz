@@ -322,14 +322,23 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
 
               const deliveryAddress = (args.deliveryAddress || session.deliveryAddress || "").trim() || null;
 
+              // Extract customer email if provided in chat or fallback to valid TLD synthetic email
+              const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
+              const foundEmail = userText.match(emailRegex)?.[1] || 
+                                 history.map(m => m.content).join(" ").match(emailRegex)?.[1] ||
+                                 null;
+
+              const customerEmail = foundEmail || `${from.replace(/[^0-9]/g, "")}@chatbiz.ng`;
+
               // Initialize transaction with Paystack using merchant subaccount
               const paystackRes = await initializeTransaction({
-                email: `${from.replace("+", "")}@chatbiz.customer`,
+                email: customerEmail,
                 amount: Math.round(totalAmount * 100), // in kobo
                 subaccount: business.paystackSubaccountCode || undefined,
                 metadata: {
                   businessId: business.id,
                   customerPhone: from,
+                  customerEmail,
                   deliveryAddress,
                 },
               });
@@ -339,6 +348,7 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
                 data: {
                   businessId: business.id,
                   customerPhone: from,
+                  customerEmail,
                   totalAmount,
                   paystackReference: paystackRes.reference,
                   paymentUrl: paystackRes.authorization_url,
