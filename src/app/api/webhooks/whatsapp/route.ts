@@ -22,24 +22,17 @@ export async function GET(req: NextRequest) {
   return new NextResponse("Forbidden", { status: 403 });
 }
 
-// In-memory cache for message deduplication (keeps message IDs for 10 minutes)
-const processedMessageIds = new Map<string, number>();
-
-function isDuplicateMessage(msgId: string): boolean {
-  const now = Date.now();
-  // Clean up expired IDs older than 10 mins (600,000 ms)
-  for (const [id, timestamp] of processedMessageIds.entries()) {
-    if (now - timestamp > 600000) {
-      processedMessageIds.delete(id);
-    }
-  }
-
-  if (processedMessageIds.has(msgId)) {
+// Distributed database-level idempotency to guarantee zero duplicate executions across serverless instances
+async function isDuplicateMessage(msgId: string): Promise<boolean> {
+  try {
+    await db.processedWebhook.create({
+      data: { id: msgId }
+    });
+    return false; // Newly inserted, not a duplicate
+  } catch (err: any) {
+    // Unique key collision means this Meta message was already processed
     return true;
   }
-
-  processedMessageIds.set(msgId, now);
-  return false;
 }
 
 // --- POST: incoming messages / status updates ---
@@ -70,9 +63,12 @@ export async function POST(req: NextRequest) {
         if (messages && messages.length > 0) {
           for (const msg of messages) {
             const msgId = msg.id;
-            if (msgId && isDuplicateMessage(msgId)) {
-              console.log(`[Deduplication] Ignoring duplicate message ${msgId}`);
-              continue;
+            if (msgId) {
+              const isDupe = await isDuplicateMessage(msgId);
+              if (isDupe) {
+                console.log(`[Distributed Deduplication] Ignoring duplicate message ${msgId}`);
+                continue;
+              }
             }
 
             const from = msg.from; // sender's WhatsApp number

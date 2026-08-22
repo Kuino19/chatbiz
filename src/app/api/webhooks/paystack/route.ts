@@ -69,12 +69,14 @@ export async function POST(req: NextRequest) {
       }
 
       const order = result.order!;
+      const customerAddressLine = order.deliveryAddress ? `\n📍 *Delivering to:* ${order.deliveryAddress}` : "";
+      const merchantAddressLine = order.deliveryAddress ? `\n📍 *Delivery Address:* ${order.deliveryAddress}` : "";
 
       // Send confirmation to Customer (outside DB transaction)
       await sendWhatsAppMessage(
         order.business,
         order.customerPhone,
-        `✅ Payment Received!\nYour order #${order.id.slice(-6).toUpperCase()} has been confirmed and is now being processed. Thank you for shopping with ${order.business.name}!`
+        `✅ *Payment Confirmed!*\nYour order *#${order.id.slice(-6).toUpperCase()}* has been confirmed and is being processed.${customerAddressLine}\n\nThank you for shopping with *${order.business.name}*! 🎉`
       ).catch((err) => console.error("Error sending customer receipt:", err));
 
       // Send confirmation to Business Owner
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest) {
         await sendWhatsAppMessage(
           order.business,
           order.business.whatsappNumber.replace("+", ""),
-          `💰 *New Payment Received*\nOrder #${order.id.slice(-6).toUpperCase()} for ₦${order.totalAmount} has been paid via Paystack.\nPlease check your dashboard.`
+          `💰 *New Payment Received*\nOrder *#${order.id.slice(-6).toUpperCase()}* for *₦${order.totalAmount.toLocaleString()}* has been paid via Paystack.${merchantAddressLine}\n\nPlease prepare fulfillment.`
         ).catch((err) => console.error("Error sending merchant alert:", err));
       }
     }

@@ -314,6 +314,8 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
                 });
               }
 
+              const deliveryAddress = (args.deliveryAddress || session.deliveryAddress || "").trim() || null;
+
               // Initialize transaction with Paystack using merchant subaccount
               const paystackRes = await initializeTransaction({
                 email: `${from.replace("+", "")}@chatbiz.customer`,
@@ -322,6 +324,7 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
                 metadata: {
                   businessId: business.id,
                   customerPhone: from,
+                  deliveryAddress,
                 },
               });
 
@@ -333,6 +336,7 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
                   totalAmount,
                   paystackReference: paystackRes.reference,
                   paymentUrl: paystackRes.authorization_url,
+                  deliveryAddress,
                   status: "PENDING",
                   items: {
                     create: orderItems,
@@ -343,7 +347,7 @@ export async function processWhatsAppMessage(businessId: string, from: string, m
               // Set current state to AWAITING_PAYMENT
               await db.customerSession.update({
                 where: { id: session.id },
-                data: { currentState: "AWAITING_PAYMENT" },
+                data: { currentState: "AWAITING_PAYMENT", deliveryAddress },
               });
 
               toolResult = `Success: Order created with ID ${order.id}. Payment URL: ${paystackRes.authorization_url}. Inform the user to complete payment at this link.`;

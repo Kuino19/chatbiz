@@ -109,6 +109,7 @@ model Order {
   paystackReference  String?  @unique
   paymentUrl         String?
   customerEmail      String?
+  deliveryAddress    String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -134,9 +135,15 @@ model CustomerSession {
   currentState       String   @default("ACTIVE")
   cartData           String?  // JSON stringified array of items
   conversationHistory String? // JSON stringified array of messages
+  deliveryAddress    String?
   updatedAt          DateTime @updatedAt
 
   business           Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@unique([businessId, customerPhone])
+}
+
+model ProcessedWebhook {
+  id        String   @id // Meta message ID
+  createdAt DateTime @default(now())
 }

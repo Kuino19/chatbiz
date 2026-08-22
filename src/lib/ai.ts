@@ -119,13 +119,17 @@ export const AI_TOOLS = [
     type: "function",
     function: {
       name: "checkout",
-      description: "Finalize the order and generate the Paystack payment link immediately. Call this whenever the customer says 'checkout', 'pay', 'buy', or wants to complete their purchase.",
+      description: "Finalize the order and generate the Paystack payment link. Call this to complete the purchase.",
       parameters: {
         type: "object",
         properties: {
           confirm: {
             type: "boolean",
             description: "Set to true to generate the checkout link",
+          },
+          deliveryAddress: {
+            type: "string",
+            description: "The customer's delivery address / location (if collected for physical goods)",
           },
         },
         required: ["confirm"],
@@ -197,12 +201,15 @@ STRICT GUARDRAILS & RULES:
    - You are NOT a general-purpose AI (do NOT act like ChatGPT).
    - DO NOT answer questions about math, general knowledge, trivia, science, history, politics, recipes, coding, or life advice.
    - If a customer asks anything off-topic or unrelated to "${business.name}" products and shopping, POLITELY DECLINE: "I'm only able to assist with shopping and orders for *${business.name}*! 😊 Would you like to see what products we have in stock?"
-2. ZERO-FRICTION CHECKOUT & PAYMENT LINK CREATION:
-   - Paystack's payment checkout link automatically captures the customer's email, card, and payment details.
-   - DO NOT block checkout by asking the customer for their email or phone number in chat.
-   - When a customer says "checkout", "buy", "pay", "proceed", "go ahead", or provides their email/address, and their cart has items, IMMEDIATELY CALL THE \`checkout\` TOOL!
-   - For physical delivery items, delivery info is confirmed on the Paystack checkout receipt or after order placement.
-   - If the cart is empty, simply say: "Your cart is currently empty! Which product would you like to order today? 😊"
+2. PHYSICAL VS DIGITAL DELIVERY & CHECKOUT RULES:
+   - For Digital Goods (ebooks, digital guides, PDFs, virtual items):
+     * Instant checkout. Call \`checkout(confirm: true)\` immediately when the customer says "checkout" or wants to pay.
+   - For Physical Goods (items that require shipping / physical delivery):
+     * If the customer has NOT provided a delivery address, ask them in 1 concise sentence: "Where should we deliver your order? (Please send your delivery address / city) 🚚"
+     * Once the customer provides their address, immediately call \`checkout(confirm: true, deliveryAddress: "...")\` to generate the payment link!
+     * If the customer already provided their address, call \`checkout\` directly with it.
+   - DO NOT ask for email or phone number in chat. Paystack handles payment credentials and email receipts automatically.
+   - If the cart is empty, ask which product they would like to add first.
 3. HUMAN HANDOFF RULES:
    - ONLY call \`request_human_agent\` if the customer EXPLICITLY demands to speak with a human or real person (e.g. "I want to talk to a human", "give me a real agent").
    - NEVER call \`request_human_agent\` when a user wants to checkout, buy, or ask product questions.
@@ -214,7 +221,7 @@ STRICT GUARDRAILS & RULES:
    - When a user asks for a picture or photo of a product, ALWAYS call \`send_product_image\`.
    - When a user wants to buy or add an item, ALWAYS call \`add_to_cart\`.
    - When a user wants to remove an item, call \`remove_from_cart\`.
-   - When a user wants to checkout or pay and has items in cart, call \`checkout\` right away.
+   - When a user wants to checkout or pay and has items in cart, follow the checkout protocol above.
 7. Conciseness:
    - Keep responses under 2-3 short, friendly sentences.
 `;
