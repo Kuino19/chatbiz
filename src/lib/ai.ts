@@ -8,14 +8,14 @@ export async function callLLM({
   const groqKey = process.env.GROQ_API_KEY?.trim();
   const geminiKey = process.env.GEMINI_API_KEY?.trim();
 
-  // 1. Try Groq (using active high-speed models)
+  // 1. Try Groq (using active high-speed models in prioritized cascade)
   if (groqKey && process.env.LLM_PROVIDER !== "gemini") {
     const groqModels = [
-      "openai/gpt-oss-120b",
-      "openai/gpt-oss-20b",
-      "qwen/qwen3.6-27b",
-      "groq/compound",
-      "groq/compound-mini"
+      "openai/gpt-oss-120b",  // Tier 1: GA fast reasoning (Primary)
+      "openai/gpt-oss-20b",   // Tier 2: GA lightweight agent (Secondary)
+      "qwen/qwen3.6-27b",     // Tier 3: Preview/evaluation model (Middle fallback)
+      "groq/compound",        // Tier 4: Agentic compound system
+      "groq/compound-mini"    // Tier 5: Compact compound fallback
     ];
 
     for (let i = 0; i < groqModels.length; i++) {
@@ -201,13 +201,14 @@ STRICT GUARDRAILS & RULES:
    - You are NOT a general-purpose AI (do NOT act like ChatGPT).
    - DO NOT answer questions about math, general knowledge, trivia, science, history, politics, recipes, coding, or life advice.
    - If a customer asks anything off-topic or unrelated to "${business.name}" products and shopping, POLITELY DECLINE: "I'm only able to assist with shopping and orders for *${business.name}*! 😊 Would you like to see what products we have in stock?"
-2. PHYSICAL VS DIGITAL DELIVERY & CHECKOUT RULES:
-   - For Digital Goods (ebooks, digital guides, PDFs, virtual items):
+2. PHYSICAL VS DIGITAL DELIVERY & MIXED CART RULES:
+   - If the cart contains ANY physical product (or a mix of physical and digital items), ALWAYS treat the order as requiring physical delivery.
+   - For 100% Pure Digital Goods (e.g. PDF ebooks, digital guides, virtual services):
      * Instant checkout. Call \`checkout(confirm: true)\` immediately when the customer says "checkout" or wants to pay.
-   - For Physical Goods (items that require shipping / physical delivery):
-     * If the customer has NOT provided a delivery address, ask them in 1 concise sentence: "Where should we deliver your order? (Please send your delivery address / city) 🚚"
-     * Once the customer provides their address, immediately call \`checkout(confirm: true, deliveryAddress: "...")\` to generate the payment link!
-     * If the customer already provided their address, call \`checkout\` directly with it.
+   - For Physical Goods / Mixed Carts (requiring dispatch/shipping):
+     * If the customer has NOT provided a valid delivery address, ask them in 1 concise sentence: "Where should we deliver your order? (Please send your street address / city / area) 🚚"
+     * Ensure the address contains a specific location (if they say 'later', 'home', or 'nearby', ask for their area/city so the merchant can dispatch the courier).
+     * Once provided, immediately call \`checkout(confirm: true, deliveryAddress: "...")\` to generate the payment link!
    - DO NOT ask for email or phone number in chat. Paystack handles payment credentials and email receipts automatically.
    - If the cart is empty, ask which product they would like to add first.
 3. HUMAN HANDOFF RULES:
