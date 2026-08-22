@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Plus, Trash2, Pencil, X, Check, Package, AlertCircle, CheckCircle2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Plus, Trash2, Pencil, X, Check, Package, AlertCircle, CheckCircle2, RefreshCw, UploadCloud, FileSpreadsheet } from "lucide-react";
 import styles from "./page.module.css";
-import { addProduct, deleteProduct, updateProduct } from "./actions";
+import { addProduct, deleteProduct, updateProduct, syncWhatsAppCatalog, importProductsCsv } from "./actions";
 
 interface Product {
   id: string;
@@ -26,10 +26,13 @@ export default function ProductsClient({ initialProducts, businessId }: Products
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [addPending, setAddPending] = useState(false);
+  const [syncPending, setSyncPending] = useState(false);
+  const [csvPending, setCsvPending] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement | null>(null);
 
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg });
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), 4000);
   }
 
   // ── ADD PRODUCT ──
@@ -53,6 +56,49 @@ export default function ProductsClient({ initialProducts, businessId }: Products
       showToast("error", err.message || "Failed to add product");
     } finally {
       setAddPending(false);
+    }
+  }
+
+  // ── SYNC FROM WHATSAPP CATALOG ──
+  async function handleSyncWhatsApp() {
+    setSyncPending(true);
+    try {
+      const res = await syncWhatsAppCatalog(businessId);
+      if (res.success) {
+        showToast("success", res.message || `Successfully synced catalog from WhatsApp!`);
+        window.location.reload();
+      } else {
+        showToast("error", res.error || "Could not sync WhatsApp catalog");
+      }
+    } catch (err: any) {
+      showToast("error", err.message || "WhatsApp sync failed");
+    } finally {
+      setSyncPending(false);
+    }
+  }
+
+  // ── BULK CSV IMPORT ──
+  async function handleCsvFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("csvFile", file);
+
+    setCsvPending(true);
+    try {
+      const res = await importProductsCsv(formData, businessId);
+      if (res.success) {
+        showToast("success", res.message || `Imported ${res.count} products from CSV!`);
+        window.location.reload();
+      } else {
+        showToast("error", res.error || "Failed to import CSV");
+      }
+    } catch (err: any) {
+      showToast("error", err.message || "CSV import failed");
+    } finally {
+      setCsvPending(false);
+      if (csvInputRef.current) csvInputRef.current.value = "";
     }
   }
 
@@ -107,6 +153,62 @@ export default function ProductsClient({ initialProducts, businessId }: Products
           {toast.msg}
         </div>
       )}
+
+      {/* ── IMPORT & QUICK ACTIONS TOOLBAR ── */}
+      <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
+        <button
+          type="button"
+          onClick={handleSyncWhatsApp}
+          disabled={syncPending}
+          className="btn"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            background: "#25D366",
+            color: "#ffffff",
+            fontWeight: 600,
+            border: "none",
+            borderRadius: "8px",
+            padding: "10px 18px",
+            cursor: syncPending ? "not-allowed" : "pointer",
+            boxShadow: "0 2px 6px rgba(37, 211, 102, 0.25)"
+          }}
+        >
+          <RefreshCw size={16} className={syncPending ? "spin" : ""} />
+          {syncPending ? "Syncing from Meta..." : "Sync from WhatsApp Catalog"}
+        </button>
+
+        <input
+          type="file"
+          accept=".csv"
+          ref={csvInputRef}
+          style={{ display: "none" }}
+          onChange={handleCsvFileChange}
+        />
+
+        <button
+          type="button"
+          onClick={() => csvInputRef.current?.click()}
+          disabled={csvPending}
+          className="btn"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            background: "#0f172a",
+            color: "#ffffff",
+            fontWeight: 600,
+            border: "none",
+            borderRadius: "8px",
+            padding: "10px 18px",
+            cursor: csvPending ? "not-allowed" : "pointer"
+          }}
+        >
+          <FileSpreadsheet size={16} />
+          {csvPending ? "Importing CSV..." : "Bulk CSV Import"}
+        </button>
+      </div>
 
       {/* ── ADD PRODUCT FORM ── */}
       <div className={`card ${styles.addProductCard}`}>
